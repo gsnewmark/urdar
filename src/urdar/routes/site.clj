@@ -1,12 +1,11 @@
 (ns urdar.routes.site
   "Routes for the basic functionality of app available to users through
 web interface."
-  (:require [urdar.views :as views]
-            [cemerick.friend :as friend]
+  (:require [urdar.controllers.site :as controllers]
             [compojure.core :refer [defroutes GET]]))
 
 (defroutes registered
-  (GET "/" req (str (friend/identity req))))
+  (GET "/" req controllers/index))
 
 (defroutes guest
-  (GET "/login" req views/login))
+  (GET "/login" req controllers/login))
