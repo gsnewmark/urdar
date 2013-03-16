@@ -1,5 +1,5 @@
 (ns urdar.server
-  (:require [urdar.routes :as r]
+  (:require [urdar.handler :as h]
             [ring.adapter.jetty :as jetty])
   (:gen-class))
 
@@ -8,5 +8,5 @@
   (let [port (Integer. (or port
                            (System/getenv "PORT")
                            5000))]
-    (jetty/run-jetty #'r/app {:port  port
+    (jetty/run-jetty #'h/app {:port  port
                               :join? false})))
