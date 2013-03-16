@@ -8,5 +8,5 @@
   (let [port (Integer. (or port
                            (System/getenv "PORT")
                            5000))]
-    (jetty/run-jetty #'h/app {:port  port
-                              :join? false})))
+    (jetty/run-jetty #'h/secured-app {:port  port
+                                      :join? false})))
