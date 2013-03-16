@@ -9,7 +9,10 @@
                                                  ring/ring-core]]
                  [enlive "1.1.1" :exclusions [org.clojure/clojure]]
                  [com.cemerick/friend "0.1.4" :exclusions [org.clojure/clojure
-                                                           ring/ring-core]]]
+                                                           ring/ring-core]]
+                 [friend-oauth2 "0.0.3" :exclusions [org.clojure/clojure
+                                                     com.cemerick/friend
+                                                     ring]]]
   :plugins [[lein-ring "0.8.3"]
             [lein-marginalia "0.7.1"]]
   :main urdar.server

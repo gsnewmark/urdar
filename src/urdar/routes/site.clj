@@ -2,10 +2,11 @@
   "Routes for the basic functionality of app available to users through
 web interface."
   (:require [urdar.views :as views]
+            [cemerick.friend :as friend]
             [compojure.core :refer [defroutes GET]]))
 
 (defroutes registered
-  (GET "/" [] views/index))
+  (GET "/" req (str (friend/identity req))))
 
 (defroutes guest
-  (GET "/login" [] views/login))
+  (GET "/login" req views/login))
