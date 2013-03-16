@@ -2,9 +2,17 @@
   "Different handy utils."
   (:require [cemerick.friend :as friend]))
 
-(defn get-access-token
-  "Retrieves an access token from given Ring request."
-  [request]
+(defn get-identity-part
+  "Retrieves specific part of user's identity."
+  [part request]
   (when-let [identity (friend/identity request)]
     (let [{:keys [current authentications]} identity]
-      (get-in authentications [current :access_token]))))
+      (get-in authentications [current part]))))
+
+(def get-access-token
+  "Retrieves an access token from given Ring request."
+  (partial get-identity-part :access_token))
+
+(def get-roles
+  "Retrieves an access token from given Ring request."
+  (partial get-identity-part :roles))
