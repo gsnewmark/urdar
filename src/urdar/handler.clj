@@ -7,9 +7,12 @@
             [cemerick.friend :as friend]
             [friend-oauth2.workflow :as oauth2]))
 
+(derive ::github-user ::user)
+(derive ::google-user ::user)
+
 (defroutes app
   (compojure/context "/" request
-                     (friend/wrap-authorize site/registered #{:urdar/user}))
+                     (friend/wrap-authorize site/registered #{::user}))
   (route/resources "/")
   (friend/logout (ANY "/logout" request (ring.util.response/redirect "/")))
   (route/not-found "<h1>Page not found</h1>"))
@@ -27,11 +30,11 @@
            :access-token-parsefn #(-> % :body
                                       ring.util.codec/form-decode
                                       (get "access_token"))
-           :config-auth (:config-auth cfg/config)})
+           :config-auth {:roles #{::github-user}}})
 
          (oauth2/workflow
           {:login-uri "/login-google"
            :client-config (:google-client-config cfg/config)
            :uri-config cfg/google-uri-config
-           :config-auth (:config-auth cfg/config)})]})
+           :config-auth {:roles #{::google-user}}})]})
       handler/site))

@@ -1,7 +1,5 @@
 {
  ;; OAuth configuration
- :config-auth {:roles #{:urdar/user}}
-
  :github-client-config
  {:client-id ""
   :client-secret ""
