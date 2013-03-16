@@ -1,0 +1,22 @@
+{
+ ;; OAuth configuration
+ :config-auth {:roles #{:urdar/user}}
+
+ :github-client-config
+ {:client-id ""
+  :client-secret ""
+  :callback {:domain "http://localhost:3000" :path "/oauth2callback.github"}}
+
+ :github-urls
+ {:authentication-url "https://github.com/login/oauth/authorize"
+  :access-token-url "https://github.com/login/oauth/access_token"}
+
+ :google-client-config
+ {:client-id ""
+  :client-secret ""
+  :callback {:domain "http://localhost:3000" :path "/oauth2callback"}}
+
+ :google-urls
+  {:authentication-url "https://accounts.google.com/o/oauth2/auth"
+   :access-token-url "https://accounts.google.com/o/oauth2/token"}
+}
