@@ -4,7 +4,7 @@
             [clj-http.client :as http]
             [cheshire.core :as json]))
 
-;; ## Helpers
+;; ## Generic API caller
 
 (defn api-get
   "Requests a given operation using given API. It is assumed that operation
@@ -19,11 +19,19 @@ begins with slash."
              :body
              (json/parse-string true))))
 
-;; ## Github API
+;; ## Specific API calls
 
-(defn github-get-mail
-  "Retrieves a mail of currently logged-in user using Github API."
-  [request]
+(defmulti get-user-mail-address
+  "Retrieves e-mail address of user using external API (OAuth provider)."
+  u/get-roles)
+
+(defmethod get-user-mail-address #{:urdar/google-user} [request]
+  (some->> (u/get-access-token request)
+           (api-get "https://www.googleapis.com/oauth2/v1"
+                    "/userinfo?alt=json")
+           :email))
+
+(defmethod get-user-mail-address #{:urdar/github-user} [request]
   (some->> (u/get-access-token request)
            (api-get "https://api.github.com" "/user/emails"
                     {:accept :application/vnd.github.v3})
@@ -31,12 +39,5 @@ begins with slash."
            first
            :email))
 
-;; ## Google API
-
-(defn google-get-mail
-  "Retrieves a mail of currently logged-in user using Github API."
-  [request]
-  (some->> (u/get-access-token request)
-           (api-get "https://www.googleapis.com/oauth2/v1"
-                    "/userinfo?alt=json")
-           :email))
+(defmethod get-user-mail-address :default [_]
+  "Unknown user.")
