@@ -15,6 +15,12 @@
   :callback {:domain "http://localhost:3000" :path "/oauth2callback"}}
 
  :google-urls
-  {:authentication-url "https://accounts.google.com/o/oauth2/auth"
-   :access-token-url "https://accounts.google.com/o/oauth2/token"}
+ {:authentication-url "https://accounts.google.com/o/oauth2/auth"
+  :access-token-url "https://accounts.google.com/o/oauth2/token"}
+
+ ;; Datastore configuration
+ :neo4j
+ {:url "http://localhost:7474/db/data"
+  :login ""
+  :password ""}
 }

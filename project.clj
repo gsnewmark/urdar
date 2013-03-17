@@ -10,7 +10,8 @@
                  [com.cemerick/friend "0.1.4"]
                  [friend-oauth2 "0.0.3"]
                  [clj-http "0.6.5"]
-                 [cheshire "5.0.2"]]
+                 [cheshire "5.0.2"]
+                 [clojurewerkz/neocons "1.0.3"]]
   :plugins [[lein-ring "0.8.3"]
             [lein-marginalia "0.7.1"]]
   :main urdar.server

@@ -8,7 +8,9 @@
   []
   (edn/read (java.io.PushbackReader. (io/reader (io/resource "config.edn")))))
 
-(def config (read-config))
+(def config
+  "Application's configuration."
+  (read-config))
 
 (def github-uri-config
   {:authentication-uri
