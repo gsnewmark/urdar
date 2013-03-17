@@ -1,37 +1,25 @@
 (ns urdar.datastore
   "Operations with a datastore."
-  (:require [urdar.config :as config]
-            [clojurewerkz.neocons.rest :as nr]
-            [clojurewerkz.neocons.rest.nodes :as nn]
-            [clojurewerkz.neocons.rest.relationships :as nrl]
-            [clojurewerkz.neocons.rest.cypher :as cy])
-  (:import [java.util Date]))
+  (:require [urdar.datastore.neo4j :as nj]))
 
-;; ## Neo4j
+(defprotocol UserDatastore
+  (user? [self e-mail]
+    "Checks whether the user with given e-mail exists in datastore.")
+  (get-user [self e-mail] "Retrieves user with given e-mail from datastore.")
+  (create-user [self e-mail] "Creates user with given e-mail in datastore."))
 
-;; Initiate connection to Neo4j REST API.
-(let [{:keys [url login password]} (:neo4j config/config)]
-  (nr/connect! url login password))
+;; ## UserDatastore Neo4j-backed implementation
 
-;; Create index for graphs roots.
-(defonce roots-index (nn/create-index "roots"))
-;; Create index for users.
-(defonce users-index (nn/create-index "users"))
+(defrecord Neo4jUserDatastore []
+  UserDatastore
+  (user? [_ e-mail]
+    (not (nil? (nj/get-user e-mail nj/users-index))))
+  (get-user [_ e-mail]
+    (nj/get-user e-mail nj/users-index))
+  (create-user [_ e-mail]
+    (nj/create-user e-mail nj/users-root nj/users-index)))
 
-;; Root of users graph.
-(defonce users-root (nn/find-one (:name roots-index) "root" "user"))
-
-(defn create-user
-  "Creates a user as a node in graph and adds it in index."
-  ([e-mail] (create-user e-mail users-root users-index))
-  ([e-mail root index]
-     (when-not (nn/find-one (:name index) "e-mail" e-mail)
-       (if-let [user (nn/create {:e-mail e-mail})]
-         (do
-           (some-> user
-                   :id
-                   (nn/add-to-index (:name index) "e-mail" e-mail true)
-                   (as-> user
-                         (nrl/create root user :registered
-                                     {:date (pr-str (Date.))})))
-           user)))))
+;; TODO make a part of configuration
+(def user-ds
+  "Particular implementation of UserDatastore protocol."
+  (->Neo4jUserDatastore))

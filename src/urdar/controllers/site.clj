@@ -1,11 +1,15 @@
 (ns urdar.controllers.site
   "Contains logic for routes."
-  (:require [urdar.views :as views]
+  (:require [urdar.datastore :as ds]
+            [urdar.views :as views]
             [urdar.helpers.external-api :as api]
             [cemerick.friend :as friend]))
 
 (defn index [request]
-  (views/index (api/get-user-mail-address request)))
+  (let [e-mail (api/get-user-mail-address request)]
+    (when-not (ds/user? ds/user-ds e-mail)
+      (ds/create-user ds/user-ds e-mail))
+    (views/index e-mail)))
 
 (defn login
   "Redirects to index page in case user is already logged in."
