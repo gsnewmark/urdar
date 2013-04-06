@@ -1,5 +1,7 @@
 # urdar
 
+[![Build Status](https://travis-ci.org/gsnewmark/urdar.png)](https://travis-ci.org/gsnewmark/urdar)
+
 Organizer for Internet bookmarks.
 
 ## License
