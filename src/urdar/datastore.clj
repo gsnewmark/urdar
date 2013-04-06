@@ -33,13 +33,16 @@
   (user? [_ e-mail]
     (not (nil? (nj/get-user-node nj/users-index e-mail))))
   (create-user [_ e-mail]
-    (nj/get-or-create-user-node  nj/users-index e-mail))
+    (nj/get-or-create-user-node nj/users-index e-mail))
   (tag-exists? [_ e-mail tag]
     (not (nil? (nj/get-tag-node nj/tags-index e-mail tag))))
   (get-tags [self e-mail]
     (nj/get-tags-for-user (nj/get-user-node nj/users-index e-mail)))
   (create-tag [_ e-mail tag]
-    (nj/get-or-create-tag-node nj/tags-index e-mail tag))
+    (nj/get-or-create-tag-node
+     nj/tags-index
+     (nj/get-user-node nj/users-index e-mail)
+     tag))
   (link-exists? [_ link]
     (not (nil? (nj/get-link-node nj/links-index link))))
   (create-bookmark [_ e-mail link]
@@ -53,8 +56,9 @@
   (get-bookmarks [_ e-mail]
     (nj/get-bookmarks-for-user (nj/get-user-node nj/users-index e-mail)))
   (get-tagged-bookmarks [_ e-mail tag]
-    (nj/get-bookmarks-for-tag (nj/get-tag-node e-mail tag))))
+    (nj/get-bookmarks-for-tag (nj/get-tag-node nj/tags-index e-mail tag))))
 
-(def neo4j-datastore
+(def datastore
+  "Interface to a data store."
   (-> (->Neo4jDatastore)
       (init)))

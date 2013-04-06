@@ -122,10 +122,12 @@ to given index. Returns nil if something goes wrong during creation."
   "Bookmarks a given link by given user."
   [user-node link-node]
   ;; TODO check if already exists
-  (nrl/create user-node link-node :bookmarked {:on (pr-str (Date.))}))
+  (do (nrl/create user-node link-node :bookmarked {:on (pr-str (Date.))})
+      link-node))
 
 (defn tag-bookmark-node
   "Adds a given bookmark to a given tag."
   [tag-node bookmark-node]
   ;; TODO check if already exists
-  (nrl/create tag-node bookmark-node :contains))
+  (do (nrl/create tag-node bookmark-node :contains)
+      bookmark-node))

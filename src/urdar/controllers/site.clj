@@ -8,8 +8,8 @@
 (defn index [request]
   ; TODO maybe put e-mail into session
   (let [e-mail (api/get-user-mail-address request)]
-    (when-not (ds/user? ds/neo4j-datastore e-mail)
-      (ds/create-user ds/neo4j-datastore e-mail))
+    (when-not (ds/user? ds/datastore e-mail)
+      (ds/create-user ds/datastore e-mail))
     (views/index e-mail)))
 
 (defn login
