@@ -11,9 +11,19 @@
                  [friend-oauth2 "0.0.3"]
                  [clj-http "0.7.0"]
                  [cheshire "5.0.2"]
-                 [clojurewerkz/neocons "1.1.0"]]
+                 [clojurewerkz/neocons "1.1.0"]
+                 [enfocus "2.0.0-SNAPSHOT"]
+                 [shoreleave "0.3.0"]
+                 [shoreleave/shoreleave-remote-ring "0.3.0"]]
   :plugins [[lein-ring "0.8.3"]
+            [lein-cljsbuild "0.3.0"]
             [lein-marginalia "0.7.1"]]
   :main urdar.server
-  :ring {:handler urdar.handler/secured-app}
-  :resource-paths ["resources"])
+  :ring {:handler urdar.handler/app}
+  :resource-paths ["resources"]
+  :cljsbuild
+  {:builds
+   [{:source-paths ["src/urdar/client"]
+     :compiler {:output-to "resources/public/js/main.js"
+                :optimizations :whitespace
+                :pretty-print true}}]})

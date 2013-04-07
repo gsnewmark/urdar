@@ -3,7 +3,17 @@
   <title>Urdar Main Page</title>
 </head>
 <body>
-  <h1>I don't do much yet.</h1>
-  User: <span id="user" /><br />
-  <a href='/logout'>Log out</>
+  <script src='/js/main.js'></script>
+  <div id='control-panel'>
+    <span id='add-bookmark'>
+      <input type='text' id='link-to-add'>
+      <button type='submit' id='add-bookmark!'>Add bookmark</button>
+    </span>
+    <span id='current-user'>
+      <span id="user" />
+      <a href='/logout'><button>Log out</button></>
+    </span>
+  </div>
+  <div id='tags' />
+  <div id='bookmarks' />
 </body>
