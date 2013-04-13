@@ -6,9 +6,8 @@
             [ring.util.response :as rr]))
 
 (defn index [{session :session :as request}]
-  ; TODO maybe put e-mail into session
+  ;; TODO shouldn't overwrite session on each request
   (let [e-mail (or (:e-mail session) (api/get-user-mail-address request))
-        ; TODO shouldn't overwrite
         session (assoc session :e-mail e-mail)]
     (when-not (ds/user? ds/datastore e-mail)
       (ds/create-user ds/datastore e-mail))

@@ -19,7 +19,6 @@
             :response_type "code"
             :redirect_uri (format-config-uri (:github-client-config config))
             :scope "user:email"}}
-
    :access-token-uri
    {:url (get-in config [:github-urls :access-token-url])
     :query {:client_id (get-in config [:github-client-config :client-id])
@@ -35,7 +34,6 @@
             :response_type "code"
             :redirect_uri (format-config-uri (:google-client-config config))
             :scope "https://www.googleapis.com/auth/userinfo.email"}}
-
    :access-token-uri
    {:url (get-in config [:google-urls :access-token-url])
     :query {:client_id (get-in config [:google-client-config :client-id])

@@ -3,6 +3,8 @@
   (:require [urdar.config :as config]
             [urdar.datastore.neo4j :as nj]))
 
+;;; TODO ability to remove tags/bookmarks/~users
+
 (defprotocol Datastore
   (init [self]
     "Performs required initialization of datastore. Returns itself.")

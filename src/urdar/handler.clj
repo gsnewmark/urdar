@@ -1,6 +1,6 @@
 (ns urdar.handler
   (:require [urdar.config :as cfg]
-            [urdar.routes.site :as site]
+            [urdar.routes :as routes]
             [compojure.core :as compojure :refer [defroutes ANY]]
             [compojure.route :as route]
             [compojure.handler :as handler]
@@ -10,17 +10,20 @@
 (derive :urdar/github-user :urdar/user)
 (derive :urdar/google-user :urdar/user)
 
-(defroutes app
+;;; TODO fix routes
+(defroutes registered-routes
+  (compojure/context "/_" request
+                     (friend/wrap-authorize routes/internal-api #{:urdar/user}))
   (compojure/context "/" request
-    (friend/wrap-authorize site/registered #{:urdar/user}))
+                     (friend/wrap-authorize routes/registered #{:urdar/user}))
   (route/resources "/")
   (friend/logout (ANY "/logout" request (ring.util.response/redirect "/")))
   (route/not-found "<h1>Page not found</h1>"))
 
-(def app-with-login (compojure/routes site/guest app))
+(def routes (compojure/routes routes/guest registered-routes))
 
-(def secured-app
-  (-> app-with-login
+(def app
+  (-> routes
       (friend/authenticate
        {:workflows
         [(oauth2/workflow
@@ -31,10 +34,10 @@
                                       ring.util.codec/form-decode
                                       (get "access_token"))
            :config-auth {:roles #{:urdar/github-user}}})
-
          (oauth2/workflow
           {:login-uri "/login-google"
            :client-config (:google-client-config cfg/config)
            :uri-config cfg/google-uri-config
            :config-auth {:roles #{:urdar/google-user}}})]})
+      ;; TODO session config
       handler/site))
