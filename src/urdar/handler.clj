@@ -5,15 +5,16 @@
             [compojure.route :as route]
             [compojure.handler :as handler]
             [cemerick.friend :as friend]
-            [friend-oauth2.workflow :as oauth2]))
+            [friend-oauth2.workflow :as oauth2]
+            [ring.middleware.edn :as edn]))
 
 (derive :urdar/github-user :urdar/user)
 (derive :urdar/google-user :urdar/user)
 
-;;; TODO fix routes
 (defroutes registered-routes
+  ;; TODO wrap friend
   (compojure/context "/_" request
-                     (friend/wrap-authorize routes/internal-api #{:urdar/user}))
+                     routes/internal-api)
   (compojure/context "/" request
                      (friend/wrap-authorize routes/registered #{:urdar/user}))
   (route/resources "/")
@@ -22,8 +23,14 @@
 
 (def routes (compojure/routes routes/guest registered-routes))
 
+(defn wrap-request-log [handler]
+  (fn [request]
+    (println (str (java.util.Date.) ": " request))
+    (handler request)))
+
 (def app
   (-> routes
+      wrap-request-log
       (friend/authenticate
        {:workflows
         [(oauth2/workflow
@@ -40,4 +47,5 @@
            :uri-config cfg/google-uri-config
            :config-auth {:roles #{:urdar/google-user}}})]})
       ;; TODO session config
-      handler/site))
+      handler/site
+      edn/wrap-edn-params))

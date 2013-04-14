@@ -10,5 +10,5 @@
   (GET "/login" req site/login))
 
 (defroutes internal-api
-  (GET "/bookmarks" req api/get-bookmarks)
-  (POST "/add-bookmark" req api/add-bookmark))
+  (GET "/bookmarks" {{e-mail :e-mail} :session} (api/get-bookmarks e-mail))
+  (POST "/add-bookmark" [link & {{e-mail :e-mail} :session}] (api/add-bookmark e-mail link)))
