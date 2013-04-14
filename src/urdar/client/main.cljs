@@ -7,6 +7,7 @@
             [shoreleave.pubsubs.protocols :as pubsub]
             [shoreleave.pubsubs.publishable]
             [shoreleave.remotes.request :as remote]
+            [dommy.template :as template]
             [shoreleave.brepl :as brepl])
   (:require-macros [enfocus.macros :as em]))
 
@@ -29,12 +30,17 @@
            :link ["#control-panel #add-bookmark #link-to-add"]
            (ef/get-prop :value)))
 
+(defn bookmark-div
+  "Creates a bookmark HTML element."
+  [bookmark]
+  (template/node [:div.bookmark bookmark]))
+
 (defn render-bookmark
   "Render a bookmark."
   [bookmark]
   (ef/at js/document
          ["#bookmarks"]
-         (ef/prepend bookmark)))
+         (ef/prepend (bookmark-div bookmark))))
 
 ;;; ## Interactions with server
 

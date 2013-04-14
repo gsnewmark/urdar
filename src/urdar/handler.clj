@@ -6,7 +6,8 @@
             [compojure.handler :as handler]
             [cemerick.friend :as friend]
             [friend-oauth2.workflow :as oauth2]
-            [ring.middleware.edn :as edn]))
+            [ring.middleware.edn :as edn]
+            [ring.middleware.resource :as res]))
 
 (derive :urdar/github-user :urdar/user)
 (derive :urdar/google-user :urdar/user)
@@ -55,4 +56,7 @@
            :config-auth {:roles #{:urdar/google-user}}})]})
       ;; TODO session config
       handler/site
-      edn/wrap-edn-params))
+      edn/wrap-edn-params
+      ;; TODO find out why it's not working
+      ;(res/wrap-resource "/META-INF/resources")
+      ))
