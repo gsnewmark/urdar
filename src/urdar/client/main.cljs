@@ -1,11 +1,17 @@
 (ns urdar.client.main
   "Entry point of client-side code."
-  (:require [enfocus.core :as ef]
+  (:require [cljs.reader :as r]
+            [enfocus.core :as ef]
             [enfocus.events :as events]
             [shoreleave.pubsubs.simple :as pbus]
             [shoreleave.pubsubs.protocols :as pubsub]
-            [shoreleave.pubsubs.publishable])
+            [shoreleave.pubsubs.publishable]
+            [shoreleave.remotes.request :as remote]
+            [shoreleave.brepl :as brepl])
   (:require-macros [enfocus.macros :as em]))
+
+;;; NOTE maybe store currently shown links in atom
+;;;      and use it as a 'publisher'
 
 ;;; ## PubSub-related utility variables/functions
 
@@ -30,7 +36,31 @@
          ["#bookmarks"]
          (ef/prepend bookmark)))
 
+;;; ## Interactions with server
+
+;;; TODO publish according to date added
+(defn get-bookmarks
+  "Retrieves all currently existing bookmarks of user from DB. "
+  []
+  (remote/request
+   [:get "/_/bookmarks"]
+   :on-success (fn [{body :body}]
+                 (let [bookmarks (r/read-string body)]
+                   (doseq [b bookmarks] (publish-bookmark b))))))
+
+(defn add-bookmark!
+  "Adds bookmark for current user in DB."
+  [link]
+  (remote/request
+   [:post "/_/add-bookmark"]
+   :headers {"Content-Type" "application/edn"}
+   :content (pr-str {:link link})
+   :on-success (fn [{link :body}]
+                 (publish-bookmark (r/read-string link)))))
+
 ;;; ## Events
+
+;;; TODO validation
 
 ;;; Publishes a newly added link when users clicks on the button.
 (em/defaction add-new-link-click-handler []
@@ -38,7 +68,7 @@
   (events/listen
    :click
    (fn [event]
-     (let [link (:link (read-link-to-add))] (publish-bookmark link)))))
+     (let [link (:link (read-link-to-add))] (add-bookmark! link)))))
 
 ;;; ## Application starter
 
@@ -46,6 +76,8 @@
   "Starts required listeners."
   []
   (subscribe-to-bookmarks render-bookmark)
-  (add-new-link-click-handler))
+  (add-new-link-click-handler)
+  (brepl/connect)
+  (get-bookmarks))
 
 (set! (.-onload js/window) start)

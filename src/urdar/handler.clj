@@ -14,7 +14,7 @@
 (defroutes registered-routes
   ;; TODO wrap friend
   (compojure/context "/_" request
-                     routes/internal-api)
+                     (friend/wrap-authorize routes/internal-api #{:urdar/user}))
   (compojure/context "/" request
                      (friend/wrap-authorize routes/registered #{:urdar/user}))
   (route/resources "/")
@@ -25,11 +25,18 @@
 
 (defn wrap-request-log [handler]
   (fn [request]
-    (println (str (java.util.Date.) ": " request))
+    (println (str "Request on " (java.util.Date.) ": " request))
     (handler request)))
+
+(defn wrap-response-log [handler]
+  (fn [request]
+    (let [r (handler request)]
+      (println (str "Response on " (java.util.Date.) ": " r))
+      r)))
 
 (def app
   (-> routes
+      wrap-response-log
       wrap-request-log
       (friend/authenticate
        {:workflows
