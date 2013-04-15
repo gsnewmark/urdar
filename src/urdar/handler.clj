@@ -7,7 +7,7 @@
             [cemerick.friend :as friend]
             [friend-oauth2.workflow :as oauth2]
             [ring.middleware.edn :as edn]
-            [ring.middleware.resource :as res]))
+            [ring.middleware.file-info :as fi]))
 
 (derive :urdar/github-user :urdar/user)
 (derive :urdar/google-user :urdar/user)
@@ -57,6 +57,4 @@
       ;; TODO session config
       handler/site
       edn/wrap-edn-params
-      ;; TODO find out why it's not working
-      ;(res/wrap-resource "/META-INF/resources")
-      ))
+      (fi/wrap-file-info)))
