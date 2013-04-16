@@ -30,10 +30,14 @@
            :link ["#control-panel #add-bookmark #link-to-add"]
            (ef/get-prop :value)))
 
+;; TODO add http:// if bookmark doesn't have it
+;; TODO buttons to delete link, add tags
+;; TODO show title of page, not link itself
 (defn bookmark-div
   "Creates a bookmark HTML element."
   [bookmark]
-  (template/node [:div.bookmark bookmark]))
+  (template/node
+   [:div.bookmark.well.well-small [:a {:href bookmark} bookmark]]))
 
 (defn render-bookmark
   "Render a bookmark."

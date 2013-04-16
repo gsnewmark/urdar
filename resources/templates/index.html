@@ -1,19 +1,62 @@
 <!DOCTYPE html>
-<head>
-  <title>Urdar Main Page</title>
-</head>
-<body>
-  <script src='/js/main.js'></script>
-  <div id='control-panel'>
-    <span id='add-bookmark'>
-      <input type='text' id='link-to-add'>
-      <button type='submit' id='add-bookmark!'>Add bookmark</button>
-    </span>
-    <span id='current-user'>
-      <span id="user" />
-      <a href='/logout'><button>Log out</button></>
-    </span>
-  </div>
-  <div id='tags' />
-  <div id='bookmarks' />
-</body>
+<html lang="en">
+  <head>
+    <title>Urdar Main Page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="css/urdar.css" rel="stylesheet">
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <link href="css/bootstrap-responsive.css" rel="stylesheet">
+  </head>
+  <body>
+    <script src='/js/main.js'></script>
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src='/js/bootstrap.js'></script>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container-fluid" id="control-panel">
+          <div class="navbar-form pull-left" id="add-bookmark">
+            <input type="text" id="link-to-add">
+            <button type="submit" class="btn btn-info" id="add-bookmark!">
+              Add bookmark
+            </button>
+          </div>
+          <div class="pull-right">
+            <ul class="nav pull-right" id="current-user">
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                  <span id="user" /><span class="caret" />
+                </a>
+                <ul class="dropdown-menu">
+                  <li>
+                    <a href="/logout"><i class="icon-off"></i>Logout</a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+          <!--<div class="nav-collapse collapse">
+            <div class="btn-group pull-right" id="current-user">
+              <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+                <i class="icon-user"></i>
+                <span id="user" /><span class="caret"></span>
+              </a>
+              <ul class="dropdown-menu">
+                <li>
+                  <a href="/logout"><i class="icon-share"></i>Logout</a>
+                </li>
+              </ul>
+            </div>
+          </div>-->
+          <!--/.nav-collapse -->
+        </div>
+        <!--/.container-fluid -->
+      </div>
+      <!--/.navbar-inner -->
+    </div>
+    <!--/.navbar -->
+    <div class="container">
+      <div id='tags' />
+      <div id='bookmarks' />
+    </div>
+  </body>
+</html>
