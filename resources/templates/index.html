@@ -11,12 +11,12 @@
     <script src='/js/main.js'></script>
     <script src="http://code.jquery.com/jquery.js"></script>
     <script src='/js/bootstrap.js'></script>
-    <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar navbar-fixed-top">
       <div class="navbar-inner">
         <div class="container-fluid" id="control-panel">
           <div class="navbar-form pull-left" id="add-bookmark">
-            <input type="text" id="link-to-add">
-            <button type="submit" class="btn btn-info" id="add-bookmark!">
+            <input type="text" id="link-to-add" placeholder="Link">
+            <button type="submit" class="btn btn-primary" id="add-bookmark!">
               Add bookmark
             </button>
           </div>
@@ -28,25 +28,14 @@
                 </a>
                 <ul class="dropdown-menu">
                   <li>
-                    <a href="/logout"><i class="icon-off"></i>Logout</a>
+                    <a href="/logout">
+                      <i class="icon-off icon-white"></i>Logout
+                    </a>
                   </li>
                 </ul>
               </li>
             </ul>
           </div>
-          <!--<div class="nav-collapse collapse">
-            <div class="btn-group pull-right" id="current-user">
-              <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-                <i class="icon-user"></i>
-                <span id="user" /><span class="caret"></span>
-              </a>
-              <ul class="dropdown-menu">
-                <li>
-                  <a href="/logout"><i class="icon-share"></i>Logout</a>
-                </li>
-              </ul>
-            </div>
-          </div>-->
           <!--/.nav-collapse -->
         </div>
         <!--/.container-fluid -->
