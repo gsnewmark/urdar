@@ -10,10 +10,12 @@
             [shoreleave.pubsubs.publishable]
             [shoreleave.remotes.request :as remote]
             [dommy.template :as template]
-            [shoreleave.brepl :as brepl])
+            [shoreleave.brepl :as brepl]
+            [goog.async.Throttle])
   (:require-macros [enfocus.macros :as em]))
 
-(def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 10}))
+(def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 10
+                  :reached-bottom true}))
 
 ;;; ## State management
 
@@ -68,14 +70,18 @@
 
 (defn fetch-bookmarks
   "Retrieves all currently existing bookmarks of user from DB. "
-  [bookmarks-fetched bookmarks-to-fetch]
-  (remote/request
-   [:get (str "/_/bookmarks/" bookmarks-fetched "/" bookmarks-to-fetch)]
-   :headers {"Content-Type" "application/edn"}
-   :on-success (fn [{body :body}]
-                 (let [bookmarks (r/read-string body)]
-                   (doseq [b bookmarks]
-                     (publish-bookmark (->BookmarkEvent (:link b) false)))))))
+  ([]
+     (let [{:keys [bookmarks-fetched bookmarks-to-fetch]} @state]
+       (fetch-bookmarks bookmarks-fetched bookmarks-to-fetch)))
+  ([bookmarks-fetched bookmarks-to-fetch]
+     (remote/request
+      [:get (str "/_/bookmarks/" bookmarks-fetched "/" bookmarks-to-fetch)]
+      :headers {"Content-Type" "application/edn"}
+      :on-success
+      (fn [{body :body}]
+        (let [bookmarks (r/read-string body)]
+          (doseq [b bookmarks]
+            (publish-bookmark (->BookmarkEvent (:link b) false))))))))
 
 (defn add-bookmark!
   "Adds bookmark for current user in DB."
@@ -92,6 +98,16 @@
      (condp = status
        409 (new-link-validation-failed "Bookmark already exists.")
        422 (new-link-validation-failed "Incorrect URL.")))))
+
+;;; ## Utils
+
+(defn document-height
+  "Retrieves height of document."
+  []
+  (let [body (.-body js/document)
+        html (.-documentElement js/document)]
+    (max (.-scrollHeight body) (.-offsetHeight body) (.-clientHeight html)
+         (.-scrollHeight html) (.-offsetHeight html))))
 
 ;;; ## Events
 
@@ -111,21 +127,19 @@
          (add-bookmark! link)
          (new-link-validation-failed "Incorrect URL."))))))
 
+;;; ## Endless Scroll
 
-(defn document-height []
-  (let [body (.-body js/document)
-        html (.-documentElement js/document)]
-    (max (.-scrollHeight body) (.-offsetHeight body) (.-clientHeight html)
-         (.-scrollHeight html) (.-offsetHeight html))))
+;;; TODO change throttle
+(def throttle (goog.async.Throttle. fetch-bookmarks 2500))
+(defn show-next-page []
+  (.fire throttle))
 
-;;; TODO smoother scroll, stop scrolling when end reached
+;;; stop scrolling when end reached
 (defn on-scroll []
   (let [max-height (document-height)
         scrolled (+ (.-pageYOffset js/window) (.-innerHeight js/window))
         left-to-scroll (- max-height scrolled)]
-    (when (< left-to-scroll 50)
-      (let [{:keys [bookmarks-fetched bookmarks-to-fetch]} @state]
-        (fetch-bookmarks bookmarks-fetched bookmarks-to-fetch)))))
+    (when (< left-to-scroll 5) (show-next-page))))
 
 ;;; ## Application starter
 
@@ -137,8 +151,7 @@
   (subscribe-to-bookmarks bookmark-fetched)
   (add-new-link-click-handler)
   (brepl/connect)
-  (let [{:keys [bookmarks-fetched bookmarks-to-fetch]} @state]
-    (fetch-bookmarks bookmarks-fetched bookmarks-to-fetch))
+  (fetch-bookmarks)
   (set! (.-onscroll js/window) on-scroll))
 
 (set! (.-onload js/window) start)
