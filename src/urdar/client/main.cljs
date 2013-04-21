@@ -120,7 +120,7 @@
   (template/node
    [:div.bookmark.well.well-small
     [:a {:href link :target "_blank"} link]
-    [:button.close.delete-bookmark! [:i.icon-remove-sign]]]))
+    [:button.close.btn-danger.delete-bookmark! "Delete"]]))
 
 ;;; TODO remove handler when deleting
 ;;; TODO actually delete when async returns success?
