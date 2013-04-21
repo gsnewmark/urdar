@@ -1,6 +1,8 @@
 (ns urdar.client.main
   "Entry point of client-side code."
-  (:require [cljs.reader :as r]
+  (:require [urdar.crossovers.validation :as v]
+            [cljs.reader :as r]
+            [clojure.string :as s]
             [enfocus.core :as ef]
             [enfocus.events :as events]
             [shoreleave.pubsubs.simple :as pbus]
@@ -46,6 +48,16 @@
          ["#bookmarks"]
          (ef/prepend (bookmark-div bookmark))))
 
+;;; Adds a validation failed notification to a new link adder.
+(em/defaction new-link-validation-failed []
+  ["#add-bookmark"] (ef/add-class "error")
+  ["#add-bookmark-error"] (ef/remove-class "hidden"))
+
+;;; Removes a validation failed notification to a new link adder.
+(em/defaction new-link-validation-succeeded [_]
+  ["#add-bookmark-error"] (ef/add-class "hidden")
+  ["#add-bookmark"] (ef/remove-class "error"))
+
 ;;; ## Interactions with server
 
 ;;; TODO publish according to date added
@@ -70,15 +82,21 @@
 
 ;;; ## Events
 
-;;; TODO validation
-
 ;;; Publishes a newly added link when users clicks on the button.
 (em/defaction add-new-link-click-handler []
   ["#add-bookmark!"]
   (events/listen
    :click
    (fn [event]
-     (let [link (:link (read-link-to-add))] (add-bookmark! link)))))
+     (let [link (-> (:link (read-link-to-add))
+                    s/trim)
+           link (if (and (not= (.indexOf link "http://") 0)
+                         (not= (.indexOf link "https://") 0))
+                  (str "http://" link)
+                  link)]
+       (if (v/valid-url? link)
+         (add-bookmark! link)
+         (new-link-validation-failed))))))
 
 ;;; ## Application starter
 
@@ -86,6 +104,7 @@
   "Starts required listeners."
   []
   (subscribe-to-bookmarks render-bookmark)
+  (subscribe-to-bookmarks new-link-validation-succeeded)
   (add-new-link-click-handler)
   (brepl/connect)
   (get-bookmarks))

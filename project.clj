@@ -23,7 +23,9 @@
   :ring {:handler urdar.server/app}
   :resource-paths ["resources"]
   :cljsbuild
-  {:builds
+  {:crossovers [urdar.crossovers]
+   :crossover-path "generated-cljs"
+   :builds
    [{:source-paths ["src/urdar/client"]
      :compiler {:output-to "resources/public/js/main.js"
                 :optimizations :whitespace

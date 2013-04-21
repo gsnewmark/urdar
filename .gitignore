@@ -8,3 +8,4 @@ pom.xml
 .lein-*
 /out
 /repl
+/generated-cljs

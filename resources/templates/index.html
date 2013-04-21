@@ -14,11 +14,16 @@
     <div class="navbar navbar-fixed-top">
       <div class="navbar-inner">
         <div class="container-fluid" id="control-panel">
-          <div class="navbar-form pull-left" id="add-bookmark">
-            <input type="text" id="link-to-add" placeholder="Link">
-            <button type="submit" class="btn btn-primary" id="add-bookmark!">
-              Add bookmark
-            </button>
+          <div class="control-group navbar-form pull-left" id="add-bookmark">
+            <div class="controls">
+              <input type="text" id="link-to-add" placeholder="Link">
+              <button type="submit" class="btn btn-primary" id="add-bookmark!">
+                Add bookmark
+              </button>
+              <span class="help-inline hidden" id="add-bookmark-error">
+                Incorrect URL.
+              </span>
+            </div>
           </div>
           <div class="pull-right">
             <ul class="nav pull-right" id="current-user">
