@@ -14,8 +14,7 @@
             [goog.async.Throttle])
   (:require-macros [enfocus.macros :as em]))
 
-(def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 10
-                  :reached-bottom true}))
+(def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 10}))
 
 ;;; ## State management
 
