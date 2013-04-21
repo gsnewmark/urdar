@@ -23,5 +23,11 @@
     (edn-response :status 422)
     (if (ds/bookmark-exists? ds/datastore e-mail link)
       (edn-response :status 409)
-      (do (ds/create-bookmark ds/datastore e-mail link)
-          (edn-response :body link)))))
+      (edn-response
+       :body (into {} (ds/create-bookmark ds/datastore e-mail link))))))
+
+(defn delete-bookmark! [e-mail link]
+  (if-not (and e-mail link (v/valid-url? link))
+    (edn-response :status 422)
+    (do (ds/delete-bookmark ds/datastore e-mail link)
+        (edn-response :status 204))))

@@ -14,45 +14,30 @@
             [goog.async.Throttle])
   (:require-macros [enfocus.macros :as em]))
 
-(def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 10}))
-
 ;;; ## State management
+
+(def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 10}))
 
 (defn bookmark-fetched [_]
   (swap! state update-in [:bookmarks-fetched] inc))
 
-;;; ## PubSub-related utility variables/functions
+(defn bookmark-removed [_]
+  (swap! state update-in [:bookmarks-fetched] dec))
 
-(defrecord BookmarkEvent [link new?])
+;;; ## Utils
 
-(def ^{:private true} bus (pbus/bus))
-(def bookmarks-topic (pubsub/topicify :bookmarks))
-(def publish-bookmark (partial pubsub/publish bus bookmarks-topic))
-(def subscribe-to-bookmarks (partial pubsub/subscribe bus bookmarks-topic))
-
-;;; ## DOM handling/rendering code
-
-(defn read-link-to-add
-  "Reads a current value of link in text field."
+(defn document-height
+  "Retrieves height of document."
   []
-  (ef/from js/document
-           :link ["#control-panel #add-bookmark #link-to-add"]
-           (ef/get-prop :value)))
+  (let [body (.-body js/document)
+        html (.-documentElement js/document)]
+    (max (.-scrollHeight body) (.-offsetHeight body) (.-clientHeight html)
+         (.-scrollHeight html) (.-offsetHeight html))))
 
-;; TODO buttons to delete link, add tags
-;; TODO show title of page, not link itself
-(defn bookmark-div
-  "Creates a bookmark HTML element."
-  [bookmark]
-  (template/node
-   [:div.bookmark.well.well-small
-    [:a {:href bookmark :target "_blank"} bookmark]]))
-
-;;; Render a bookmark.
-(em/defaction render-bookmark [{:keys [link new?]}]
-  ["#bookmarks"]
-  (let [adder (if new? ef/prepend ef/append)]
-    (adder (bookmark-div link))))
+(defn get-parent
+  "Retrieves parent of a current node."
+  [node]
+  (.-parentNode node))
 
 ;;; Adds a validation failed notification to a new link adder.
 (em/defaction new-link-validation-failed [error-msg]
@@ -64,6 +49,16 @@
 (em/defaction new-link-validation-succeeded [_]
   ["#add-bookmark-error"] (ef/add-class "hidden")
   ["#add-bookmark"] (ef/remove-class "error"))
+
+
+;;; ## PubSub-related utility variables/functions
+
+(defrecord BookmarkEvent [link new?])
+
+(def ^{:private true} bus (pbus/bus))
+(def bookmarks-topic (pubsub/topicify :bookmarks))
+(def publish-bookmark (partial pubsub/publish bus bookmarks-topic))
+(def subscribe-to-bookmarks (partial pubsub/subscribe bus bookmarks-topic))
 
 ;;; ## Interactions with server
 
@@ -90,23 +85,60 @@
    :headers {"Content-Type" "application/edn"}
    :content (pr-str {:link link})
    :on-success
-   (fn [{link :body}]
-     (publish-bookmark (->BookmarkEvent (r/read-string link) true)))
+   (fn [{bookmark :body}]
+     (let [b (r/read-string bookmark)]
+       (publish-bookmark (->BookmarkEvent (:link b) true))))
    :on-error
    (fn [{status :status}]
      (condp = status
        409 (new-link-validation-failed "Bookmark already exists.")
        422 (new-link-validation-failed "Incorrect URL.")))))
 
-;;; ## Utils
+;;; TODO on-success, on-error
+(defn remove-bookmark!
+  "Adds bookmark for current user in DB."
+  [link]
+  (remote/request
+   [:delete "/_/delete-bookmark"]
+   :headers {"Content-Type" "application/edn"}
+   :content (pr-str {:link link})))
 
-(defn document-height
-  "Retrieves height of document."
+;;; ## DOM handling/rendering code
+
+(defn read-link-to-add
+  "Reads a current value of link in text field."
   []
-  (let [body (.-body js/document)
-        html (.-documentElement js/document)]
-    (max (.-scrollHeight body) (.-offsetHeight body) (.-clientHeight html)
-         (.-scrollHeight html) (.-offsetHeight html))))
+  (ef/from js/document
+           :link ["#control-panel #add-bookmark #link-to-add"]
+           (ef/get-prop :value)))
+
+;; TODO buttons to add tags
+;; TODO show title of page, not link itself
+(defn bookmark-div
+  "Creates a bookmark HTML element."
+  [link]
+  (template/node
+   [:div.bookmark.well.well-small
+    [:a {:href link :target "_blank"} link]
+    [:button.close.delete-bookmark! [:i.icon-remove-sign]]]))
+
+;;; TODO remove handler when deleting
+;;; TODO actually delete when async returns success?
+;;; Render a bookmark.
+(defn render-bookmark [{:keys [link new?]}]
+  (let [n (bookmark-div link)]
+    (ef/at js/document
+           ["#bookmarks"]
+           (let [adder (if new? ef/prepend ef/append)]
+             (adder n)))
+    (ef/at
+     n
+     [".delete-bookmark!"]
+     (events/listen
+      :click
+      (fn [event]
+        (remove-bookmark! link)
+        (ef/at (get-parent (.-currentTarget event)) (ef/remove-node)))))))
 
 ;;; ## Events
 
@@ -128,13 +160,15 @@
 
 ;;; ## Endless Scroll
 
-;;; TODO change throttle
 (def throttle (goog.async.Throttle. fetch-bookmarks 1500))
 (defn show-next-page []
   (.fire throttle))
 
 ;;; TODO stop scrolling when end reached
-(defn on-scroll []
+(defn on-scroll
+  "Load next 'page' of bookmarks (if any left) when bottom of page is
+   reached."
+  []
   (let [max-height (document-height)
         scrolled (+ (.-pageYOffset js/window) (.-innerHeight js/window))
         left-to-scroll (- max-height scrolled)]
@@ -145,9 +179,9 @@
 (defn ^:export start
   "Starts required listeners."
   []
-  (subscribe-to-bookmarks render-bookmark)
-  (subscribe-to-bookmarks new-link-validation-succeeded)
   (subscribe-to-bookmarks bookmark-fetched)
+  (subscribe-to-bookmarks new-link-validation-succeeded)
+  (subscribe-to-bookmarks render-bookmark)
   (add-new-link-click-handler)
   (brepl/connect)
   (fetch-bookmarks)
