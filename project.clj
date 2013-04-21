@@ -20,7 +20,7 @@
             [lein-cljsbuild "0.3.0"]
             [lein-marginalia "0.7.1"]]
   :main urdar.server
-  :ring {:handler urdar.handler/app}
+  :ring {:handler urdar.server/app}
   :resource-paths ["resources"]
   :cljsbuild
   {:builds

@@ -4,4 +4,4 @@
 (html/deftemplate index "templates/index.html" [user]
   [:span#user] (html/content user))
 
-(html/deftemplate login "templates/login.html" [_])
+(html/deftemplate index-unregistered "templates/index_unregistered.html" [_])

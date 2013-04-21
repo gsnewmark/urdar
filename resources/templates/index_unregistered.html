@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Urdar Main Page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="css/urdar.css" rel="stylesheet">
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <link href="css/bootstrap-responsive.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/font-awesome.min.css">
+  </head>
+  <body>
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src='/js/bootstrap.js'></script>
+    <a class="btn btn-primary" data-toggle="modal" href="#login">Login</a>
+    <div class="modal hide" id="login" data-keyboard="true">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">x</button>
+      </div>
+      <div class="modal-body">
+        <a href="/login-github" class="btn btn-large btn-block">
+          <i class="icon-github-sign icon-large"></i>
+          Sign in with Github
+        </a>
+        <a href="/login-google" class="btn btn-large btn-block">
+          <i class="icon-google-plus-sign icon-large"></i>
+          Sign in with Google
+        </a>
+      </div>
+    </div>
+  </body>
+</html>
