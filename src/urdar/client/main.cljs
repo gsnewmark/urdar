@@ -129,16 +129,16 @@
 ;;; ## Endless Scroll
 
 ;;; TODO change throttle
-(def throttle (goog.async.Throttle. fetch-bookmarks 2500))
+(def throttle (goog.async.Throttle. fetch-bookmarks 1500))
 (defn show-next-page []
   (.fire throttle))
 
-;;; stop scrolling when end reached
+;;; TODO stop scrolling when end reached
 (defn on-scroll []
   (let [max-height (document-height)
         scrolled (+ (.-pageYOffset js/window) (.-innerHeight js/window))
         left-to-scroll (- max-height scrolled)]
-    (when (< left-to-scroll 5) (show-next-page))))
+    (when (= left-to-scroll 0) (show-next-page))))
 
 ;;; ## Application starter
 

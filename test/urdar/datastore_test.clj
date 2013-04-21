@@ -35,6 +35,23 @@
     (is (= (ds/bookmark-exists? ds/datastore e-mail link1) true))
     (is (= (ds/bookmark-exists? ds/datastore e-mail link2) false))))
 
+(deftest user-bookmark-deletion
+  (let [e-mail "alice@example.com"
+        link "http://page-to-remove.example.com"]
+    (is (= (get-in (ds/create-user ds/datastore e-mail) [:data :e-mail])
+           e-mail))
+    (is
+     (= (get-in (ds/create-bookmark ds/datastore e-mail link) [:link])
+        link))
+    (is (ds/link-exists? ds/datastore link))
+    (is (contains?
+         (into #{} (map :link (ds/get-bookmarks ds/datastore e-mail)))
+         link))
+    (ds/delete-bookmark ds/datastore e-mail link)
+    (is (not (contains?
+              (into #{} (map :link (ds/get-bookmarks ds/datastore e-mail)))
+              link)))))
+
 (deftest user-tag-creation
   (let [e-mail "charlie@example.com"
         tag "my-tag"]

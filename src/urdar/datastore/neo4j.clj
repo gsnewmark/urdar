@@ -128,6 +128,13 @@ to given index. Returns nil if something goes wrong during creation."
   (when (and user-node link-node)
     (nrl/first-outgoing-between user-node link-node [:bookmarked])))
 
+;;; TODO delete all tags of bookmark
+(defn delete-bookmark
+  [bookmark-node]
+  "Deletes a given bookmark node."
+  (when bookmark-node
+    (nrl/maybe-delete (:id bookmark-node))))
+
 (defn get-tagged
   "Retrieves a :contains relation between given tag and node."
   [tag-node link-node]

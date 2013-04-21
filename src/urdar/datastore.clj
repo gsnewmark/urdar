@@ -5,6 +5,7 @@
 
 ;;; TODO ability to remove tags/bookmarks/~users
 ;;; TODO get-tagged-bookmarks should return Bookmark
+;;; TODO retrieve quantity of bookmarks
 
 (defrecord Bookmark [e-mail link date])
 
@@ -25,6 +26,8 @@
   (create-bookmark [self e-mail link]
     "Creates a link and bookmarks it for a given user. Returns Bookmark
      instance.")
+  (delete-bookmark [self e-mail link]
+    "Deletes given link from user's bookmarks (if it's present).")
   (tag-bookmark [self e-mail tag link] "Adds tag to given link.")
   (get-bookmarks [self e-mail] [self e-mail skip quant]
     "Retrieves all or quant number of bookmarks (instances of Bookmark) of
@@ -65,6 +68,11 @@
               (nj/get-user-node nj/users-index e-mail)
               (nj/get-or-create-link-node nj/links-index link))]
       (map->Bookmark bookmark)))
+  (delete-bookmark [_ e-mail link]
+    (let [bookmark-node
+          (nj/get-bookmark (nj/get-user-node nj/users-index e-mail)
+                           (nj/get-link-node nj/links-index link))]
+      (nj/delete-bookmark bookmark-node)))
   (tag-bookmark [_ e-mail tag link]
     (nj/tag-bookmark-node
      (nj/get-tag-node nj/tags-index e-mail tag)

@@ -2,6 +2,9 @@
   (:require [urdar.datastore :as ds]
             [urdar.crossovers.validation :as v]))
 
+;;; TODO throw exceptions instead of edn-responses, create middleware
+;;;      to transform them into response
+
 (defn edn-response [& {:keys [body status]}]
   {:status (or status 200)
    :headers {"Content-Type" "application/edn"}
