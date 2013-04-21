@@ -26,7 +26,11 @@
   {:crossovers [urdar.crossovers]
    :crossover-path "generated-cljs"
    :builds
-   [{:source-paths ["src/urdar/client"]
-     :compiler {:output-to "resources/public/js/main.js"
-                :optimizations :whitespace
-                :pretty-print true}}]})
+   {:dev {:source-paths ["src/urdar/client"]
+          :compiler {:output-to "resources/public/js/main.js"
+                     :optimizations :whitespace
+                     :pretty-print true}}
+    :prod {:source-paths ["src/urdar/client"]
+           :compiler {:output-to "resources/public/js/main.js"
+                      :optimizations :advanced
+                      :pretty-print false}}}})
