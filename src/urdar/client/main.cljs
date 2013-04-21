@@ -39,7 +39,8 @@
   "Creates a bookmark HTML element."
   [bookmark]
   (template/node
-   [:div.bookmark.well.well-small [:a {:href bookmark} bookmark]]))
+   [:div.bookmark.well.well-small
+    [:a {:href bookmark :target "_blank"} bookmark]]))
 
 (defn render-bookmark
   "Render a bookmark."
@@ -49,9 +50,10 @@
          (ef/prepend (bookmark-div bookmark))))
 
 ;;; Adds a validation failed notification to a new link adder.
-(em/defaction new-link-validation-failed []
+(em/defaction new-link-validation-failed [error-msg]
   ["#add-bookmark"] (ef/add-class "error")
-  ["#add-bookmark-error"] (ef/remove-class "hidden"))
+  ["#add-bookmark-error"] (ef/do-> (ef/content error-msg)
+                                   (ef/remove-class "hidden")))
 
 ;;; Removes a validation failed notification to a new link adder.
 (em/defaction new-link-validation-succeeded [_]
@@ -68,7 +70,8 @@
    [:get "/_/bookmarks"]
    :on-success (fn [{body :body}]
                  (let [bookmarks (r/read-string body)]
-                   (doseq [b bookmarks] (publish-bookmark b))))))
+                   (doseq [b (reverse bookmarks)]
+                     (publish-bookmark (:link b)))))))
 
 (defn add-bookmark!
   "Adds bookmark for current user in DB."
@@ -78,7 +81,11 @@
    :headers {"Content-Type" "application/edn"}
    :content (pr-str {:link link})
    :on-success (fn [{link :body}]
-                 (publish-bookmark (r/read-string link)))))
+                 (publish-bookmark (r/read-string link)))
+   :on-error (fn [{status :status}]
+               (condp = status
+                 409 (new-link-validation-failed "Bookmark already exists.")
+                 422 (new-link-validation-failed "Incorrect URL.")))))
 
 ;;; ## Events
 
@@ -96,7 +103,7 @@
                   link)]
        (if (v/valid-url? link)
          (add-bookmark! link)
-         (new-link-validation-failed))))))
+         (new-link-validation-failed "Incorrect URL."))))))
 
 ;;; ## Application starter
 

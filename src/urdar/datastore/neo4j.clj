@@ -31,9 +31,11 @@
 
 (defn run-query-from-root
   "Retrieves information from query that runs from a given root."
-  [root query field]
-  ;; TODO maybe shouldn't be lazy
-  (map #(get % field) (cy/tquery query {:sid (:id root)})))
+  ([root query] (run-query-from-root root query nil))
+  ([root query field]
+     (when root
+       (let [res (cy/tquery query {:sid (:id root)})]
+         (if field (map #(get % field) res) res)))))
 
 (defn get-user-node
   "Retrieves user node with given e-mail from given index."
@@ -67,17 +69,16 @@ index."
   [user-node]
   (run-query-from-root
    user-node
-   (str "START user=node({sid}) MATCH user-[:bookmarked]->bookmark"
-        " RETURN bookmark.link")
-   "bookmark.link"))
+   (str "START user=node({sid}) MATCH user-[r:bookmarked]->bookmark "
+        "RETURN bookmark.link, r.on ORDER BY r.on DESC")))
 
 (defn get-bookmarks-for-tag
   "Retrieves all bookmarks' links which given tag contains."
   [tag-node]
   (run-query-from-root
    tag-node
-   (str "START tag=node({sid}) MATCH tag-[:contains]->bookmark"
-        " RETURN bookmark.link")
+   (str "START tag=node({sid}) MATCH tag-[:contains]->bookmark "
+        "RETURN bookmark.link")
    "bookmark.link"))
 
 ;; ## Entity creation
@@ -118,16 +119,35 @@ to given index. Returns nil if something goes wrong during creation."
 
 ;; ## Bookmark handling
 
-(defn bookmark-link-node
-  "Bookmarks a given link by given user."
+(defn get-bookmark
   [user-node link-node]
-  ;; TODO check if already exists
-  (do (nrl/create user-node link-node :bookmarked {:on (pr-str (Date.))})
-      link-node))
+  "Retrieves a :bookmark relation between given user and link."
+  (when (and user-node link-node)
+    (nrl/first-outgoing-between user-node link-node [:bookmarked])))
+
+(defn get-tagged
+  "Retrieves a :contains relation between given tag and node."
+  [tag-node link-node]
+  (when (and tag-node link-node)
+    (nrl/first-outgoing-between tag-node link-node [:contains])))
+
+(defn bookmark-link-node
+  "Bookmarks a given link by given user. Returns nil if bookmark already
+   exists."
+  [user-node link-node]
+  (when (and user-node link-node (nil? (get-bookmark user-node link-node)))
+    (let [bookmark-rel
+          (nrl/create user-node link-node :bookmarked {:on (pr-str (Date.))})]
+      (-> link-node
+          :data
+          (assoc :e-mail (get-in user-node [:data :e-mail])
+                 :date (get-in bookmark-rel [:data :on]))))))
 
 (defn tag-bookmark-node
-  "Adds a given bookmark to a given tag."
-  [tag-node bookmark-node]
+  "Adds a given link to a given tag. Returns nil if bookmark already has
+   given tag."
+  [tag-node link-node]
   ;; TODO check if already exists
-  (do (nrl/create tag-node bookmark-node :contains)
-      bookmark-node))
+  (when (and tag-node link-node (nil? (get-tagged tag-node link-node)))
+    (nrl/maybe-create tag-node link-node :contains)
+    link-node))

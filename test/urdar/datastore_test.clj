@@ -12,14 +12,28 @@
 
 (deftest user-bookmark-creation
   (let [e-mail "alice@example.com"
-        link "http://page.example.com"]
+        link "http://pageA.example.com"]
     (is (= (get-in (ds/create-user ds/datastore e-mail) [:data :e-mail])
            e-mail))
     (is
-     (= (get-in (ds/create-bookmark ds/datastore e-mail link) [:data :link])
+     (= (get-in (ds/create-bookmark ds/datastore e-mail link) [:link])
         link))
     (is (ds/link-exists? ds/datastore link))
-    (is (contains? (into #{} (ds/get-bookmarks ds/datastore e-mail)) link))))
+    (is (contains?
+         (into #{} (map :link (ds/get-bookmarks ds/datastore e-mail)))
+         link))))
+
+(deftest user-bookmark-existence
+  (let [e-mail "alice@example.com"
+        link1 "http://pageA1.example.com"
+        link2 "http://pageA2.example.com"]
+    (is (= (get-in (ds/create-user ds/datastore e-mail) [:data :e-mail])
+           e-mail))
+    (is
+     (= (get-in (ds/create-bookmark ds/datastore e-mail link1) [:link])
+        link1))
+    (is (= (ds/bookmark-exists? ds/datastore e-mail link1) true))
+    (is (= (ds/bookmark-exists? ds/datastore e-mail link2) false))))
 
 (deftest user-tag-creation
   (let [e-mail "charlie@example.com"
@@ -33,12 +47,12 @@
 (deftest user-tag-bookmark-creation
   (let [e-mail "dave@example.com"
         tag "my-tag"
-        link "http://page2.example.com"]
+        link "http://pageD.example.com"]
     (is (= (get-in (ds/create-user ds/datastore e-mail) [:data :e-mail])
            e-mail))
     (is (= (get-in (ds/create-tag ds/datastore e-mail tag) [:data :name])))
     (is
-     (= (get-in (ds/create-bookmark ds/datastore e-mail link) [:data :link])
+     (= (get-in (ds/create-bookmark ds/datastore e-mail link) [:link])
         link))
     (ds/tag-bookmark ds/datastore e-mail tag link)
     (is (contains?
