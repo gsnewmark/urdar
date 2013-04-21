@@ -15,7 +15,14 @@
 
 (def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 10}))
 
+;;; ## State management
+
+(defn bookmark-fetched [_]
+  (swap! state update-in [:bookmarks-fetched] inc))
+
 ;;; ## PubSub-related utility variables/functions
+
+(defrecord BookmarkEvent [link new?])
 
 (def ^{:private true} bus (pbus/bus))
 (def bookmarks-topic (pubsub/topicify :bookmarks))
@@ -31,7 +38,6 @@
            :link ["#control-panel #add-bookmark #link-to-add"]
            (ef/get-prop :value)))
 
-;; TODO add http:// if bookmark doesn't have it
 ;; TODO buttons to delete link, add tags
 ;; TODO show title of page, not link itself
 (defn bookmark-div
@@ -41,12 +47,11 @@
    [:div.bookmark.well.well-small
     [:a {:href bookmark :target "_blank"} bookmark]]))
 
-(defn render-bookmark
-  "Render a bookmark."
-  [bookmark]
-  (ef/at js/document
-         ["#bookmarks"]
-         (ef/prepend (bookmark-div bookmark))))
+;;; Render a bookmark.
+(em/defaction render-bookmark [{:keys [link new?]}]
+  ["#bookmarks"]
+  (let [adder (if new? ef/prepend ef/append)]
+    (adder (bookmark-div link))))
 
 ;;; Adds a validation failed notification to a new link adder.
 (em/defaction new-link-validation-failed [error-msg]
@@ -61,18 +66,16 @@
 
 ;;; ## Interactions with server
 
-;;; TODO publish according to date added
-(defn get-bookmarks
+(defn fetch-bookmarks
   "Retrieves all currently existing bookmarks of user from DB. "
-  []
-  (let [{:keys [bookmarks-fetched bookmarks-to-fetch]} @state]
-    (remote/request
-    [:get (str "/_/bookmarks/" bookmarks-fetched "/" bookmarks-to-fetch)]
-    :headers {"Content-Type" "application/edn"}
-    :on-success (fn [{body :body}]
-                  (let [bookmarks (r/read-string body)]
-                    (doseq [b (reverse bookmarks)]
-                      (publish-bookmark (:link b))))))))
+  [bookmarks-fetched bookmarks-to-fetch]
+  (remote/request
+   [:get (str "/_/bookmarks/" bookmarks-fetched "/" bookmarks-to-fetch)]
+   :headers {"Content-Type" "application/edn"}
+   :on-success (fn [{body :body}]
+                 (let [bookmarks (r/read-string body)]
+                   (doseq [b bookmarks]
+                     (publish-bookmark (->BookmarkEvent (:link b) false)))))))
 
 (defn add-bookmark!
   "Adds bookmark for current user in DB."
@@ -81,12 +84,14 @@
    [:post "/_/add-bookmark"]
    :headers {"Content-Type" "application/edn"}
    :content (pr-str {:link link})
-   :on-success (fn [{link :body}]
-                 (publish-bookmark (r/read-string link)))
-   :on-error (fn [{status :status}]
-               (condp = status
-                 409 (new-link-validation-failed "Bookmark already exists.")
-                 422 (new-link-validation-failed "Incorrect URL.")))))
+   :on-success
+   (fn [{link :body}]
+     (publish-bookmark (->BookmarkEvent (r/read-string link) true)))
+   :on-error
+   (fn [{status :status}]
+     (condp = status
+       409 (new-link-validation-failed "Bookmark already exists.")
+       422 (new-link-validation-failed "Incorrect URL.")))))
 
 ;;; ## Events
 
@@ -106,6 +111,22 @@
          (add-bookmark! link)
          (new-link-validation-failed "Incorrect URL."))))))
 
+
+(defn document-height []
+  (let [body (.-body js/document)
+        html (.-documentElement js/document)]
+    (max (.-scrollHeight body) (.-offsetHeight body) (.-clientHeight html)
+         (.-scrollHeight html) (.-offsetHeight html))))
+
+;;; TODO smoother scroll, stop scrolling when end reached
+(defn on-scroll []
+  (let [max-height (document-height)
+        scrolled (+ (.-pageYOffset js/window) (.-innerHeight js/window))
+        left-to-scroll (- max-height scrolled)]
+    (when (< left-to-scroll 50)
+      (let [{:keys [bookmarks-fetched bookmarks-to-fetch]} @state]
+        (fetch-bookmarks bookmarks-fetched bookmarks-to-fetch)))))
+
 ;;; ## Application starter
 
 (defn ^:export start
@@ -113,8 +134,11 @@
   []
   (subscribe-to-bookmarks render-bookmark)
   (subscribe-to-bookmarks new-link-validation-succeeded)
+  (subscribe-to-bookmarks bookmark-fetched)
   (add-new-link-click-handler)
   (brepl/connect)
-  (get-bookmarks))
+  (let [{:keys [bookmarks-fetched bookmarks-to-fetch]} @state]
+    (fetch-bookmarks bookmarks-fetched bookmarks-to-fetch))
+  (set! (.-onscroll js/window) on-scroll))
 
 (set! (.-onload js/window) start)
