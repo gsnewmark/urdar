@@ -65,12 +65,15 @@ index."
    "tag.name"))
 
 (defn get-bookmarks-for-user
-  "Retrieves all bookmarks' links which a given user added."
-  [user-node]
-  (run-query-from-root
-   user-node
-   (str "START user=node({sid}) MATCH user-[r:bookmarked]->bookmark "
-        "RETURN bookmark.link, r.on ORDER BY r.on DESC")))
+  "Retrieves all bookmarks or quant number of bookmarks skipping first skip
+   bookmarks which a given user added."
+  ([user-node] (get-bookmarks-for-user user-node nil nil))
+  ([user-node skip quant]
+     (run-query-from-root
+      user-node
+      (str "START user=node({sid}) MATCH user-[r:bookmarked]->bookmark "
+           "RETURN bookmark.link, r.on ORDER BY r.on DESC "
+           (when (and skip quant) (str "SKIP " skip " LIMIT " quant))))))
 
 (defn get-bookmarks-for-tag
   "Retrieves all bookmarks' links which given tag contains."

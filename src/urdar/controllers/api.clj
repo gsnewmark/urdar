@@ -7,12 +7,12 @@
    :headers {"Content-Type" "application/edn"}
    :body (when body (pr-str body))})
 
-;;; TODO add date when bookmark was added
+(defn str-integer? [s] (not (nil? (when s (re-matches #"\d+" s)))))
 
-(defn get-bookmarks [e-mail]
-  (if e-mail
-    (edn-response
-     :body (doall (map (partial into {}) (ds/get-bookmarks ds/datastore e-mail))))
+(defn get-bookmarks [e-mail skip quant]
+  (if (and e-mail (str-integer? skip) (str-integer? quant))
+    (let [bookmarks (ds/get-bookmarks ds/datastore e-mail skip quant)]
+     (edn-response :body (doall (map (partial into {}) bookmarks))))
     (edn-response :status 422)))
 
 (defn add-bookmark! [e-mail link]

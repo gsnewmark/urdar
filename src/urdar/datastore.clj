@@ -26,9 +26,10 @@
     "Creates a link and bookmarks it for a given user. Returns Bookmark
      instance.")
   (tag-bookmark [self e-mail tag link] "Adds tag to given link.")
-  (get-bookmarks [self e-mail]
-    "Retrieves all bookmarks (instances of Bookmark) of given user sorted
-     by their creation date (descending).")
+  (get-bookmarks [self e-mail skip quant]
+    "Retrieves quant number of bookmarks (instances of Bookmark) of given
+     user sorted by their creation date (descending) skipping first skip
+     bookmarks.")
   (get-tagged-bookmarks [self e-mail tag]
     "Retrieves all bookmarks of given user which has given tag."))
 
@@ -68,12 +69,12 @@
     (nj/tag-bookmark-node
      (nj/get-tag-node nj/tags-index e-mail tag)
      (nj/get-link-node nj/links-index link)))
-  (get-bookmarks [_ e-mail]
+  (get-bookmarks [_ e-mail skip quant]
     (letfn [(cypher-res->Bookmark [res]
               (->Bookmark e-mail (get res "bookmark.link") (get res "r.on")))]
       (map cypher-res->Bookmark
            (nj/get-bookmarks-for-user
-            (nj/get-user-node nj/users-index e-mail)))))
+            (nj/get-user-node nj/users-index e-mail) skip quant))))
   (get-tagged-bookmarks [_ e-mail tag]
     (nj/get-bookmarks-for-tag (nj/get-tag-node nj/tags-index e-mail tag))))
 

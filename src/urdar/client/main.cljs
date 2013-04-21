@@ -13,8 +13,7 @@
             [shoreleave.brepl :as brepl])
   (:require-macros [enfocus.macros :as em]))
 
-;;; NOTE maybe store currently shown links in atom
-;;;      and use it as a 'publisher'
+(def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 10}))
 
 ;;; ## PubSub-related utility variables/functions
 
@@ -66,12 +65,14 @@
 (defn get-bookmarks
   "Retrieves all currently existing bookmarks of user from DB. "
   []
-  (remote/request
-   [:get "/_/bookmarks"]
-   :on-success (fn [{body :body}]
-                 (let [bookmarks (r/read-string body)]
-                   (doseq [b (reverse bookmarks)]
-                     (publish-bookmark (:link b)))))))
+  (let [{:keys [bookmarks-fetched bookmarks-to-fetch]} @state]
+    (remote/request
+    [:get (str "/_/bookmarks/" bookmarks-fetched "/" bookmarks-to-fetch)]
+    :headers {"Content-Type" "application/edn"}
+    :on-success (fn [{body :body}]
+                  (let [bookmarks (r/read-string body)]
+                    (doseq [b (reverse bookmarks)]
+                      (publish-bookmark (:link b))))))))
 
 (defn add-bookmark!
   "Adds bookmark for current user in DB."
