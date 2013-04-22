@@ -16,7 +16,8 @@
 
 ;;; ## State management
 
-(def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 10}))
+;;; TODO bookmarks-to-fetch should be based on screen height
+(def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 20}))
 
 (defn bookmark-fetched [_]
   (swap! state update-in [:bookmarks-fetched] inc))
