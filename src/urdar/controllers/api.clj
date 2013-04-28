@@ -7,7 +7,7 @@
 
 (defn edn-response [& {:keys [body status]}]
   {:status (or status 200)
-   :headers {"Content-Type" "application/edn"}
+   :headers {"Content-Type" "application/edn;charset=utf-8"}
    :body (when body (pr-str body))})
 
 (defn str-integer? [s] (not (nil? (when s (re-matches #"\d+" s)))))

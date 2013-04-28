@@ -63,6 +63,8 @@
 
 ;;; ## Interactions with server
 
+;;; TODO correctly receive non-english characters
+
 (defn fetch-bookmarks
   "Retrieves all currently existing bookmarks of user from DB. "
   ([]
@@ -71,7 +73,7 @@
   ([bookmarks-fetched bookmarks-to-fetch]
      (remote/request
       [:get (str "/_/bookmarks/" bookmarks-fetched "/" bookmarks-to-fetch)]
-      :headers {"Content-Type" "application/edn"}
+      :headers {"Content-Type" "application/edn;charset=utf-8"}
       :on-success
       (fn [{body :body}]
         (let [bookmarks (r/read-string body)]
@@ -83,7 +85,7 @@
   [link]
   (remote/request
    [:post "/_/add-bookmark"]
-   :headers {"Content-Type" "application/edn"}
+   :headers {"Content-Type" "application/edn;charset=utf-8"}
    :content (pr-str {:link link})
    :on-success
    (fn [{bookmark :body}]
