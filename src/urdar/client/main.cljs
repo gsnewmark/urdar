@@ -14,15 +14,17 @@
             [goog.async.Throttle])
   (:require-macros [enfocus.macros :as em]))
 
+;;; TODO extract namespaces
+
 ;;; ## State management
 
 ;;; TODO bookmarks-to-fetch should be based on screen height
 (def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 20}))
 
-(defn bookmark-fetched [_]
+(defn bookmark-fetched! [_]
   (swap! state update-in [:bookmarks-fetched] inc))
 
-(defn bookmark-removed [_]
+(defn bookmark-removed! [_]
   (swap! state update-in [:bookmarks-fetched] dec))
 
 ;;; ## Utils
@@ -40,6 +42,8 @@
   [node]
   (.-parentNode node))
 
+(def get-grandparent (comp get-parent get-parent))
+
 ;;; Adds a validation failed notification to a new link adder.
 (em/defaction new-link-validation-failed [error-msg]
   ["#add-bookmark"] (ef/add-class "error")
@@ -51,10 +55,9 @@
   ["#add-bookmark-error"] (ef/add-class "hidden")
   ["#add-bookmark"] (ef/remove-class "error"))
 
-
 ;;; ## PubSub-related utility variables/functions
 
-(defrecord BookmarkEvent [link new?])
+(defrecord BookmarkEvent [link new? tags])
 
 (def ^{:private true} bus (pbus/bus))
 (def bookmarks-topic (pubsub/topicify :bookmarks))
@@ -78,7 +81,7 @@
       (fn [{body :body}]
         (let [bookmarks (r/read-string body)]
           (doseq [b bookmarks]
-            (publish-bookmark (->BookmarkEvent (:link b) false))))))))
+            (publish-bookmark (->BookmarkEvent (:link b) false (:tags b)))))))))
 
 (defn add-bookmark!
   "Adds bookmark for current user in DB."
@@ -90,7 +93,7 @@
    :on-success
    (fn [{bookmark :body}]
      (let [b (r/read-string bookmark)]
-       (publish-bookmark (->BookmarkEvent (:link b) true))))
+       (publish-bookmark (->BookmarkEvent (:link b) true []))))
    :on-error
    (fn [{status :status}]
      (condp = status
@@ -103,8 +106,17 @@
   [link]
   (remote/request
    [:delete "/_/delete-bookmark"]
-   :headers {"Content-Type" "application/edn"}
+   :headers {"Content-Type" "application/edn;charset=utf-8"}
    :content (pr-str {:link link})))
+
+;;; TODO on-success, on-error
+(defn add-tag!
+  "Adds bookmark for current user in DB."
+  [tag link]
+  (remote/request
+   [:post "/_/add-tag"]
+   :headers {"Content-Type" "application/edn;charset=utf-8"}
+   :content (pr-str {:link link :tag tag})))
 
 ;;; ## DOM handling/rendering code
 
@@ -115,21 +127,29 @@
            :link ["#control-panel #add-bookmark #link-to-add"]
            (ef/get-prop :value)))
 
-;; TODO buttons to add tags
-;; TODO show title of page, not link itself
+;;; TODO button to delete tag
+(defn tag-div
+  "Creates a HTML element for tag."
+  [tag]
+  [:li [:span.label tag]])
+
+;;; TODO show title of page, not link itself
 (defn bookmark-div
   "Creates a bookmark HTML element."
-  [link]
+  [link tags]
   (template/node
    [:div.bookmark.well.well-small
-    [:a {:href link :target "_blank"} link]
-    [:button.close.btn-danger.delete-bookmark! "Delete"]]))
+    [:div [:a {:href link :target "_blank"} link]
+     [:button.close.btn-danger.delete-bookmark! "Delete"]]
+    [:div.tags
+     [:ul.inline
+      [:li [:button.add-tag! [:i.icon-plus]]]
+      (when-not (empty? tags) (doall (map tag-div tags)))]]]))
 
 ;;; TODO remove handler when deleting
-;;; TODO actually delete when async returns success?
 ;;; Render a bookmark.
-(defn render-bookmark [{:keys [link new?]}]
-  (let [n (bookmark-div link)]
+(defn render-bookmark [{:keys [link new? tags]}]
+  (let [n (bookmark-div link tags)]
     (ef/at js/document
            ["#bookmarks"]
            (let [adder (if new? ef/prepend ef/append)]
@@ -141,7 +161,15 @@
       :click
       (fn [event]
         (remove-bookmark! link)
-        (ef/at (get-parent (.-currentTarget event)) (ef/remove-node)))))))
+        ;; TODO use pubsub
+        (bookmark-removed! event)
+        (ef/at (get-grandparent (.-currentTarget event)) (ef/remove-node))))
+     [".add-tag!"]
+     (events/listen
+      :click
+      ;; TODO use pubsub
+      ;; TODO actually specify tag
+      (fn [event] (add-tag! "tag" link))))))
 
 ;;; ## Events
 
@@ -182,7 +210,7 @@
 (defn ^:export start
   "Starts required listeners."
   []
-  (subscribe-to-bookmarks bookmark-fetched)
+  (subscribe-to-bookmarks bookmark-fetched!)
   (subscribe-to-bookmarks new-link-validation-succeeded)
   (subscribe-to-bookmarks render-bookmark)
   (add-new-link-click-handler)

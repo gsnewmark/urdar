@@ -7,7 +7,7 @@
 ;;; TODO get-tagged-bookmarks should return Bookmark
 ;;; TODO retrieve quantity of bookmarks
 
-(defrecord Bookmark [e-mail link date])
+(defrecord Bookmark [e-mail link date tags])
 
 (defprotocol Datastore
   (init [self]
@@ -67,19 +67,20 @@
              (nj/bookmark-link-node
               (nj/get-user-node nj/users-index e-mail)
               (nj/get-or-create-link-node nj/links-index link))]
-      (map->Bookmark bookmark)))
+      (map->Bookmark (assoc bookmark :tags []))))
   (delete-bookmark [_ e-mail link]
     (let [bookmark-node
           (nj/get-bookmark (nj/get-user-node nj/users-index e-mail)
                            (nj/get-link-node nj/links-index link))]
       (nj/delete-bookmark bookmark-node)))
-  (tag-bookmark [_ e-mail tag link]
-    (nj/tag-bookmark-node
-     (nj/get-tag-node nj/tags-index e-mail tag)
-     (nj/get-link-node nj/links-index link)))
+  (tag-bookmark [self e-mail tag link]
+    (let [tag-node (or (nj/get-tag-node nj/tags-index e-mail tag)
+                       (create-tag self e-mail tag))]
+      (nj/tag-bookmark-node tag-node (nj/get-link-node nj/links-index link))))
   (get-bookmarks [_ e-mail skip quant]
     (letfn [(cypher-res->Bookmark [res]
-              (->Bookmark e-mail (get res "bookmark.link") (get res "r.on")))]
+              (->Bookmark e-mail (get res "bookmark.link") (get res "r.on")
+                          (into [] (get res :tags))))]
       (map cypher-res->Bookmark
            (nj/get-bookmarks-for-user
             (nj/get-user-node nj/users-index e-mail) skip quant))))

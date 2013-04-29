@@ -14,4 +14,6 @@
   (POST "/add-bookmark" [link :as {{e-mail :e-mail} :session}]
         (api/add-bookmark! e-mail link))
   (DELETE "/delete-bookmark" [link :as {{e-mail :e-mail} :session}]
-          (api/delete-bookmark! e-mail link)))
+          (api/delete-bookmark! e-mail link))
+  (POST "/add-tag" [link tag :as {{e-mail :e-mail} :session}]
+        (api/add-tag! e-mail tag link)))

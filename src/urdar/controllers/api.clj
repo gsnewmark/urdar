@@ -31,3 +31,9 @@
     (edn-response :status 422)
     (do (ds/delete-bookmark ds/datastore e-mail link)
         (edn-response :status 204))))
+
+(defn add-tag! [e-mail tag link]
+  (if-not (and e-mail tag link)
+    (edn-response :status 422)
+    (do (ds/tag-bookmark ds/datastore e-mail tag link)
+        (edn-response :status 204))))

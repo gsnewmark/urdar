@@ -64,16 +64,33 @@ index."
    "START user=node({sid}) MATCH user-[:has]->tag RETURN tag.name"
    "tag.name"))
 
+(defn get-tags-for-bookmark
+  "Returns sorted set of all given user's tags for a given link."
+  [user-node link-node]
+  (into
+   (sorted-set)
+   (map #(get % "tag.name")
+        (cy/tquery (str "START user=node({sid1}), bookmark=node({sid2}) "
+                        "MATCH (user)-[:has]->(tag)-[:contains]->(bookmark) "
+                        "RETURN tag.name")
+                   {:sid1 (:id user-node) :sid2 (:id link-node)}))))
+
 (defn get-bookmarks-for-user
   "Retrieves all bookmarks or quant number of bookmarks skipping first skip
-   bookmarks which a given user added."
+   bookmarks which a given user added (including date added and tags)."
   ([user-node] (get-bookmarks-for-user user-node nil nil))
   ([user-node skip quant]
-     (run-query-from-root
-      user-node
-      (str "START user=node({sid}) MATCH user-[r:bookmarked]->bookmark "
-           "RETURN bookmark.link, r.on ORDER BY r.on DESC "
-           (when (and skip quant) (str "SKIP " skip " LIMIT " quant))))))
+     (map
+      (fn [{link "bookmark.link" :as b}]
+        (assoc b :tags
+               (get-tags-for-bookmark user-node
+                                      (get-link-node links-index link))))
+      (run-query-from-root
+       user-node
+       (str "START user=node({sid}) "
+            "MATCH (user)-[r:bookmarked]->(bookmark) "
+            "RETURN bookmark.link, r.on ORDER BY r.on DESC "
+            (when (and skip quant) (str "SKIP " skip " LIMIT " quant)))))))
 
 (defn get-bookmarks-for-tag
   "Retrieves all bookmarks' links which given tag contains."
@@ -123,15 +140,15 @@ to given index. Returns nil if something goes wrong during creation."
 ;; ## Bookmark handling
 
 (defn get-bookmark
-  [user-node link-node]
   "Retrieves a :bookmark relation between given user and link."
+  [user-node link-node]
   (when (and user-node link-node)
     (nrl/first-outgoing-between user-node link-node [:bookmarked])))
 
 ;;; TODO delete all tags of bookmark
 (defn delete-bookmark
-  [bookmark-node]
   "Deletes a given bookmark node."
+  [bookmark-node]
   (nrl/maybe-delete (:id bookmark-node)))
 
 (defn get-tagged
