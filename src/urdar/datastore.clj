@@ -25,16 +25,21 @@
     "Checks whether given link is already bookmarked by user.")
   (create-bookmark [self e-mail link]
     "Creates a link and bookmarks it for a given user. Returns Bookmark
-     instance.")
+    instance.")
   (delete-bookmark [self e-mail link]
     "Deletes given link from user's bookmarks (if it's present).")
+  (bookmark-tagged? [self e-mail tag link]
+    "Checks whether given link has given tag.")
   (tag-bookmark [self e-mail tag link] "Adds tag to given link.")
+  (untag-bookmark [self e-mail tag link] "Removes tag from given link.")
   (get-bookmarks [self e-mail] [self e-mail skip quant]
     "Retrieves all or quant number of bookmarks (instances of Bookmark) of
-     given user sorted by their creation date (descending), optionally
-     skipping first skip bookmarks.")
-  (get-tagged-bookmarks [self e-mail tag]
-    "Retrieves all bookmarks of given user which has given tag."))
+    given user sorted by their creation date (descending), optionally
+    skipping first skip bookmarks.")
+  (get-tagged-bookmarks [self e-mail tag] [self e-mail tag skip quant]
+    "Retrieves all or quant number of bookmarks (instances of Bookmark) with
+    given tag of given user sorted by their creation date (descending),
+    optionally skipping first skip bookmarks."))
 
 ;; ## Datastore Neo4j-backed implementation
 
@@ -73,10 +78,19 @@
           (nj/get-bookmark (nj/get-user-node nj/users-index e-mail)
                            (nj/get-link-node nj/links-index link))]
       (nj/delete-bookmark bookmark-node)))
+  (bookmark-tagged? [self e-mail tag link]
+    (let [tag-node (or (nj/get-tag-node nj/tags-index e-mail tag))
+          link-node (nj/get-link-node nj/links-index link)]
+      (not (nil? (nj/get-tagged tag-node link-node)))))
   (tag-bookmark [self e-mail tag link]
     (let [tag-node (or (nj/get-tag-node nj/tags-index e-mail tag)
-                       (create-tag self e-mail tag))]
-      (nj/tag-bookmark-node tag-node (nj/get-link-node nj/links-index link))))
+                       (create-tag self e-mail tag))
+          link-node (nj/get-link-node nj/links-index link)]
+      (nj/tag-bookmark-node tag-node link-node)))
+  (untag-bookmark [self e-mail tag link]
+    (let [tag-node (nj/get-tag-node nj/tags-index e-mail tag)
+          link-node (nj/get-link-node nj/links-index link)]
+      (nj/untag-bookmark-node tag-node link-node)))
   (get-bookmarks [_ e-mail skip quant]
     (letfn [(cypher-res->Bookmark [res]
               (->Bookmark e-mail (get res "bookmark.link") (get res "r.on")
@@ -86,8 +100,16 @@
             (nj/get-user-node nj/users-index e-mail) skip quant))))
   (get-bookmarks [self e-mail]
     (get-bookmarks self e-mail nil nil))
-  (get-tagged-bookmarks [_ e-mail tag]
-    (nj/get-bookmarks-for-tag (nj/get-tag-node nj/tags-index e-mail tag))))
+  (get-tagged-bookmarks [self e-mail tag]
+    (get-tagged-bookmarks self e-mail tag nil nil))
+  (get-tagged-bookmarks [_ e-mail tag skip quant]
+    (letfn [(cypher-res->Bookmark [res]
+              (->Bookmark e-mail (get res "bookmark.link") nil
+                          (into [] (get res :tags))))]
+      (map cypher-res->Bookmark
+           (nj/get-bookmarks-for-tag (nj/get-user-node nj/users-index e-mail)
+                                     (nj/get-tag-node nj/tags-index e-mail tag)
+                                     skip quant)))))
 
 (def datastore
   "Interface to a data store."

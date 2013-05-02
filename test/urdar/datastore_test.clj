@@ -72,6 +72,19 @@
      (= (get-in (ds/create-bookmark ds/datastore e-mail link) [:link])
         link))
     (ds/tag-bookmark ds/datastore e-mail tag link)
-    (is (contains?
-         (into #{} (ds/get-tagged-bookmarks ds/datastore e-mail tag))
-         link))))
+    (is (ds/bookmark-tagged? ds/datastore e-mail tag link))))
+
+(deftest user-tag-bookmark-deletion
+  (let [e-mail "pit@example.com"
+        tag "my-tag2"
+        link "http://pageE.example.com"]
+    (is (= (get-in (ds/create-user ds/datastore e-mail) [:data :e-mail])
+           e-mail))
+    (is (= (get-in (ds/create-tag ds/datastore e-mail tag) [:data :name])))
+    (is
+     (= (get-in (ds/create-bookmark ds/datastore e-mail link) [:link])
+        link))
+    (ds/tag-bookmark ds/datastore e-mail tag link)
+    (is (ds/bookmark-tagged? ds/datastore e-mail tag link))
+    (ds/untag-bookmark ds/datastore e-mail tag link)
+    (is (not (ds/bookmark-tagged? ds/datastore e-mail tag link)))))

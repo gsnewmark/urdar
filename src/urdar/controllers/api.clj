@@ -18,6 +18,14 @@
      (edn-response :body (doall (map (partial into {}) bookmarks))))
     (edn-response :status 422)))
 
+(defn get-tagged-bookmarks [e-mail tag skip quant]
+  (if (and e-mail tag (str-integer? skip) (str-integer? quant))
+    (edn-response :body
+                  (doall (map (partial into {})
+                              (ds/get-tagged-bookmarks ds/datastore
+                                                       e-mail tag skip quant))))
+    (edn-response :status 422)))
+
 (defn add-bookmark! [e-mail link]
   (if-not (and e-mail link (v/valid-url? link))
     (edn-response :status 422)
@@ -35,5 +43,12 @@
 (defn add-tag! [e-mail tag link]
   (if-not (and e-mail tag link)
     (edn-response :status 422)
-    (do (ds/tag-bookmark ds/datastore e-mail tag link)
+    (if (not (nil? (ds/tag-bookmark ds/datastore e-mail tag link)))
+      (edn-response :status 204 :body {:tag tag})
+      (edn-response :status 302))))
+
+(defn remove-tag! [e-mail tag link]
+  (if-not (and e-mail tag link)
+    (edn-response :status 422)
+    (do (ds/untag-bookmark ds/datastore e-mail tag link)
         (edn-response :status 204))))
