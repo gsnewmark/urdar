@@ -18,6 +18,11 @@
      (edn-response :body (doall (map (partial into {}) bookmarks))))
     (edn-response :status 422)))
 
+(defn get-tags [e-mail]
+  (if e-mail
+    (edn-response :body (ds/get-tags ds/datastore e-mail))
+    (edn-response :status 422)))
+
 (defn get-tagged-bookmarks [e-mail tag skip quant]
   (if (and e-mail tag (str-integer? skip) (str-integer? quant))
     (edn-response :body

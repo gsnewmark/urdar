@@ -49,7 +49,7 @@
 
 (def get-grandparent (comp get-parent get-parent))
 
-(defn generate-popup-id [link] (count link))
+(defn generate-popup-id [link] (:bookmarks-fetched @state))
 
 ;;; Adds a validation failed notification to a new link adder.
 (em/defaction new-link-validation-failed [error-msg]
@@ -62,7 +62,7 @@
   ["#add-bookmark-error"] (ef/add-class "hidden")
   ["#add-bookmark"] (ef/remove-class "error"))
 
-(em/defaction remove-all-bookmarks [_]
+(em/defaction remove-all-bookmarks []
   [".bookmark"] (ef/remove-node))
 
 ;;; ## PubSub-related utility variables/functions
@@ -95,6 +95,20 @@
             (publish-bookmark (->BookmarkEvent (:link b) false
                                                (:tags b)))))))))
 
+(declare render-tag-menu-element clean-tags-menu)
+(defn fetch-tags
+  "Retrieves all currently existing tags of user from DB."
+  []
+  (remote/request
+   [:get "/_/tags"]
+   :headers {"Content-Type" "application/edn;charset=utf-8"}
+   :on-success
+   (fn [{tags-str :body}]
+     (let [tags (r/read-string tags-str)]
+       (clean-tags-menu)
+       (render-tag-menu-element nil)
+       (doseq [tag tags] (render-tag-menu-element tag))))))
+
 (defn add-bookmark!
   "Adds bookmark for current user in DB."
   [link]
@@ -122,7 +136,7 @@
    :content (pr-str {:link link})))
 
 (declare render-tag)
-;;; TODO on-success, on-error
+;;; TODO on-success, on-error, pubsub
 ;;; TODO tag validation
 (defn add-tag!
   "Tags a link for current user."
@@ -132,7 +146,7 @@
    :headers {"Content-Type" "application/edn;charset=utf-8"}
    :content (pr-str {:link link :tag tag})
    :on-success
-   (fn [resp] (render-tag node link tag))
+   (fn [resp] (do (fetch-tags) (render-tag node link tag)))
    :on-error
    (fn [_] (ef/log-debug "error"))))
 
@@ -175,14 +189,19 @@
       [:div.span8.offset4
        [:button.btn.btn-primary {:type "submit"} "Add tag"]]]]]))
 
+(defn tag-link [tag]
+  (let [[tag-link tag-text] (if tag
+                              [(str "#" tag) tag]
+                              ["#" "Remove tag filtering"])]
+    (template/node
+     [:span [:a.set-tag! {:href tag-link} [:span.tag tag-text]]])))
+
 (defn tag-element
   "Creates a HTML element for tag."
   [tag]
   (template/node
    [:span
-    [:span.label
-     [:a.set-tag! {:href (str "#" tag)}
-      [:span.tag tag]]
+    [:span.label (tag-link tag) " "
      [:a.remove-tag! {:href "#delete-tag"} [:i.icon-remove]]]
     " "]))
 
@@ -257,6 +276,29 @@
     (when (not (empty? tags))
       (doall (map (partial render-tag n link) tags)))))
 
+(defn clean-tags-menu []
+  (ef/at js/document
+         ["#tags"]
+         (ef/content "")))
+
+;;; TODO ability to delete tags completely
+;;; TODO 'unselect' link after click
+(defn render-tag-menu-element [tag]
+  (let [tag-node (tag-link tag)]
+    (ef/at js/document
+           ["#tags"]
+           (ef/prepend tag-node " "))
+    (ef/at tag-node
+           [".set-tag!"]
+           (events/listen
+            :click
+            ;; TODO use pubsub
+            (fn [event]
+              (ef/log-debug "click")
+              (set-tag! tag)
+              (remove-all-bookmarks)
+              (fetch-bookmarks))))))
+
 ;;; ## Events
 
 ;;; Publishes a newly added link when users clicks on the button.
@@ -301,6 +343,7 @@
   (subscribe-to-bookmarks render-bookmark)
   (add-new-link-click-handler)
   (brepl/connect)
+  (fetch-tags)
   (fetch-bookmarks)
   (set! (.-onscroll js/window) on-scroll))
 
