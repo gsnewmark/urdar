@@ -3,8 +3,6 @@
   (:require [urdar.config :as config]
             [urdar.datastore.neo4j :as nj]))
 
-;;; TODO ability to remove tags/bookmarks/~users
-;;; TODO get-tagged-bookmarks should return Bookmark
 ;;; TODO retrieve quantity of bookmarks
 
 (defrecord Bookmark [e-mail link tags date])
@@ -86,10 +84,8 @@
               (nj/get-or-create-link-node nj/links-index link))]
       (map->Bookmark (assoc bookmark :tags []))))
   (delete-bookmark [_ e-mail link]
-    (let [bookmark-rel
-          (nj/get-bookmark (nj/get-user-node nj/users-index e-mail)
-                           (nj/get-link-node nj/links-index link))]
-      (nj/delete-bookmark bookmark-rel)))
+    (nj/delete-bookmark (nj/get-user-node nj/users-index e-mail)
+                     (nj/get-link-node nj/links-index link)))
   (bookmark-tagged? [self e-mail tag link]
     (let [tag-node (or (nj/get-tag-node nj/tags-index e-mail tag))
           link-node (nj/get-link-node nj/links-index link)]

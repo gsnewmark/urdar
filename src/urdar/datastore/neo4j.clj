@@ -164,11 +164,19 @@
   (when (and user-node link-node)
     (nrl/first-outgoing-between user-node link-node [:bookmarked])))
 
-;;; TODO delete all tags of bookmark
 (defn delete-bookmark
   "Deletes a given bookmark node."
-  [bookmark-rel]
-  (nrl/maybe-delete (:id bookmark-rel)))
+  [user-node link-node]
+  (let [tags (get-tags-for-bookmark user-node link-node)
+        bookmark-rel (get-bookmark user-node link-node)
+        e-mail (get-in user-node [:data :e-mail])]
+    (doseq [tag tags]
+      (let [tag-node (get-tag-node tags-index e-mail tag)]
+        (doseq [r (nrl/all-outgoing-between tag-node link-node [:contains])]
+          (nrl/maybe-delete (:id r)))
+        (when-not (any-bookmarks-tagged? user-node tag-node)
+          (delete-tag tag-node))))
+    (nrl/maybe-delete (:id bookmark-rel))))
 
 (defn get-tagged
   "Retrieves a :contains relation between given tag and node."

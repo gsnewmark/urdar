@@ -22,6 +22,7 @@
   (p/subscribe-to-bookmarks d/render-bookmark)
   (p/subscribe-to-bookmarks-removed d/remove-node)
   (p/subscribe-to-bookmarks-removed s/bookmark-removed!)
+  (p/subscribe-to-bookmarks-removed r/fetch-tags)
   (p/subscribe-to-tags-menu-changes d/clean-tags-menu)
   (p/subscribe-to-tags-menu-changes d/render-tag-menu-element)
   (p/subscribe-to-tags d/render-tag)
