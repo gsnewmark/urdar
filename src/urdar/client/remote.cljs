@@ -33,7 +33,7 @@
 
 ;;;--------------------------------------------------------------------------
 
-;;; TODO more elaborate error handling for remotes
+;;; TODO more elaborate error handling for some remotes
 
 (defn fetch-bookmarks
   "Retrieves all currently existing bookmarks of user from DB. "
@@ -80,7 +80,8 @@
    :on-success
    (fn [{bookmark :body}]
      (let [b (r/read-string bookmark)]
-       (p/publish-bookmark (p/->BookmarkAddedEvent (:link b) true []))))
+       (p/publish-bookmark (p/->BookmarkAddedEvent (:link b) true []))
+       (p/publish-tag-changed (p/->TagChangedEvent nil))))
    :on-error
    (fn [{status :status}]
      (condp = status
