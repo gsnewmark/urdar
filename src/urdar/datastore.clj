@@ -45,6 +45,12 @@
 
 ;; ## Datastore Neo4j-backed implementation
 
+(defn- cypher-res->Bookmark
+  [e-mail res]
+  (->Bookmark e-mail (get res "bookmark.link")
+              (into [] (get res :tags))
+              (get res "r.on")))
+
 (defrecord Neo4jDatastore []
   Datastore
   (init [self]
@@ -80,10 +86,10 @@
               (nj/get-or-create-link-node nj/links-index link))]
       (map->Bookmark (assoc bookmark :tags []))))
   (delete-bookmark [_ e-mail link]
-    (let [bookmark-node
+    (let [bookmark-rel
           (nj/get-bookmark (nj/get-user-node nj/users-index e-mail)
                            (nj/get-link-node nj/links-index link))]
-      (nj/delete-bookmark bookmark-node)))
+      (nj/delete-bookmark bookmark-rel)))
   (bookmark-tagged? [self e-mail tag link]
     (let [tag-node (or (nj/get-tag-node nj/tags-index e-mail tag))
           link-node (nj/get-link-node nj/links-index link)]
@@ -101,25 +107,18 @@
       (when-not (nj/any-bookmarks-tagged? user-node tag-node)
         (nj/delete-tag tag-node))))
   (get-bookmarks [_ e-mail skip quant]
-    (letfn [(cypher-res->Bookmark [res]
-              (->Bookmark e-mail (get res "bookmark.link")
-                          (into [] (get res :tags))
-                          (get res "r.on")))]
-      (map cypher-res->Bookmark
-           (nj/get-bookmarks-for-user
-            (nj/get-user-node nj/users-index e-mail) skip quant))))
+    (map (partial cypher-res->Bookmark e-mail)
+         (nj/get-bookmarks-for-user
+          (nj/get-user-node nj/users-index e-mail) skip quant)))
   (get-bookmarks [self e-mail]
     (get-bookmarks self e-mail nil nil))
   (get-tagged-bookmarks [self e-mail tag]
     (get-tagged-bookmarks self e-mail tag nil nil))
   (get-tagged-bookmarks [_ e-mail tag skip quant]
-    (letfn [(cypher-res->Bookmark [res]
-              (->Bookmark e-mail (get res "bookmark.link")
-                          (into [] (get res :tags)) nil))]
-      (map cypher-res->Bookmark
-           (nj/get-bookmarks-for-tag (nj/get-user-node nj/users-index e-mail)
-                                     (nj/get-tag-node nj/tags-index e-mail tag)
-                                     skip quant)))))
+    (map (partial cypher-res->Bookmark e-mail)
+         (nj/get-bookmarks-for-tag (nj/get-user-node nj/users-index e-mail)
+                                   (nj/get-tag-node nj/tags-index e-mail tag)
+                                   skip quant))))
 
 (def datastore
   "Interface to a data store."

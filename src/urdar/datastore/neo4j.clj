@@ -58,7 +58,6 @@
 (defn get-tags-for-user
   "Retrieves all tags' names of a given user node."
   [user-node]
-  ;; TODO maybe shouldn't be lazy
   (run-query-from-root
    user-node
    "START user=node({sid}) MATCH user-[:has]->tag RETURN tag.name"
@@ -75,16 +74,20 @@
                         "RETURN tag.name")
                    {:sid1 (:id user-node) :sid2 (:id link-node)}))))
 
+(defn- get-bookmarks-with-tags
+  [user-node bookmarks]
+  (map
+   (fn [{link "bookmark.link" :as b}]
+     (assoc b :tags (get-tags-for-bookmark user-node
+                                           (get-link-node links-index link))))
+   bookmarks))
+
 (defn get-bookmarks-for-user
   "Retrieves all bookmarks or quant number of bookmarks skipping first skip
   bookmarks which a given user added (including date added and tags)."
   ([user-node] (get-bookmarks-for-user user-node nil nil))
   ([user-node skip quant]
-     (map
-      (fn [{link "bookmark.link" :as b}]
-        (assoc b :tags
-               (get-tags-for-bookmark user-node
-                                      (get-link-node links-index link))))
+     (get-bookmarks-with-tags user-node
       (run-query-from-root
        user-node
        (str "START user=node({sid}) "
@@ -92,22 +95,18 @@
             "RETURN bookmark.link, r.on ORDER BY r.on DESC "
             (when (and skip quant) (str "SKIP " skip " LIMIT " quant)))))))
 
-;;; TODO add sort, date to result
 (defn get-bookmarks-for-tag
   "Retrieves all bookmarks' links which given tag contains."
   ([user-node tag-node] (get-bookmarks-for-tag tag-node nil nil))
   ([user-node tag-node skip quant]
-     (map
-      (fn [{link "bookmark.link" :as b}]
-        (assoc b :tags
-               (get-tags-for-bookmark user-node
-                                      (get-link-node links-index link))))
-      (run-query-from-root
-       tag-node
-       (str "START tag=node({sid}) "
-            "MATCH (tag)-[:contains]->(bookmark) "
-            "RETURN bookmark.link "
-            (when (and skip quant) (str "SKIP " skip " LIMIT " quant)))))))
+     (get-bookmarks-with-tags user-node
+      (cy/tquery (str "START tag=node({sid1}),user=node({sid2}) "
+                      "MATCH "
+                      "(tag)-[:contains]->(bookmark)<-[r:bookmarked]-(user) "
+                      "RETURN bookmark.link, r.on ORDER BY r.on DESC "
+                      (when (and skip quant)
+                        (str "SKIP " skip " LIMIT " quant)))
+                 {:sid1 (:id tag-node) :sid2 (:id user-node)}))))
 
 ;; ## Entity creation
 
