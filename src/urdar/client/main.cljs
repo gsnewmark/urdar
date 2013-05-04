@@ -15,7 +15,6 @@
   (:require-macros [enfocus.macros :as em]))
 
 ;;; TODO extract namespaces
-;;; TODO find out why bookmarks are rendered twice sometimes
 
 ;;; ## State management
 
@@ -28,7 +27,7 @@
 (defn bookmark-removed! [_]
   (swap! state update-in [:bookmarks-fetched] dec))
 
-(defn set-tag! [tag]
+(defn set-tag! [{:keys [tag]}]
   (swap! state assoc :tag tag)
   (swap! state assoc :bookmarks-fetched 0))
 
@@ -49,7 +48,7 @@
 
 (def get-grandparent (comp get-parent get-parent))
 
-(defn generate-popup-id [link] (:bookmarks-fetched @state))
+(defn generate-id [link] (:bookmarks-fetched @state))
 
 ;;; Adds a validation failed notification to a new link adder.
 (em/defaction new-link-validation-failed [error-msg]
@@ -67,16 +66,48 @@
 
 ;;; ## PubSub-related utility variables/functions
 
-(defrecord BookmarkEvent [link new? tags])
+(defrecord BookmarkAddedEvent [link new? tags])
+(defrecord BookmarkRemovedEvent [node])
+(defrecord TagMenuChange [tag reset-menu?])
+(defrecord TagAddedEvent [node link tag update-tag-menu?])
+(defrecord TagRemovedEvent [node])
+(defrecord TagChangedEvent [tag])
 
 (def ^{:private true} bus (pbus/bus))
+
 (def bookmarks-topic (pubsub/topicify :bookmarks))
 (def publish-bookmark (partial pubsub/publish bus bookmarks-topic))
 (def subscribe-to-bookmarks (partial pubsub/subscribe bus bookmarks-topic))
 
+(def bookmarks-removed-topic (pubsub/topicify :bookmarks-removed))
+(def publish-bookmark-removed
+  (partial pubsub/publish bus bookmarks-removed-topic))
+(def subscribe-to-bookmarks-removed
+  (partial pubsub/subscribe bus bookmarks-removed-topic))
+
+(def tags-menu-topic (pubsub/topicify :tags-menu))
+(def publish-tags-menu-change (partial pubsub/publish bus tags-menu-topic))
+(def subscribe-to-tags-menu-changes
+  (partial pubsub/subscribe bus tags-menu-topic))
+
+(def tags-topic (pubsub/topicify :tags))
+(def publish-tag (partial pubsub/publish bus tags-topic))
+(def subscribe-to-tags (partial pubsub/subscribe bus tags-topic))
+
+(def tags-removed-topic (pubsub/topicify :tags-removed))
+(def publish-tag-removed
+  (partial pubsub/publish bus tags-removed-topic))
+(def subscribe-to-tags-removed
+  (partial pubsub/subscribe bus tags-removed-topic))
+
+(def tag-changed-topic (pubsub/topicify :change-tag))
+(def publish-tag-changed (partial pubsub/publish bus tag-changed-topic))
+(def subscribe-to-tag-changed
+  (partial pubsub/subscribe bus tag-changed-topic))
+
 ;;; ## Interactions with server
 
-;;; TODO correctly receive non-english characters
+;;; TODO more elaborate error handling for remotes
 
 (defn fetch-bookmarks
   "Retrieves all currently existing bookmarks of user from DB. "
@@ -92,71 +123,79 @@
       (fn [{body :body}]
         (let [bookmarks (r/read-string body)]
           (doseq [b bookmarks]
-            (publish-bookmark (->BookmarkEvent (:link b) false
-                                               (:tags b)))))))))
+            (publish-bookmark (->BookmarkAddedEvent (:link b) false
+                                               (:tags b))))))
+      :on-error
+      (fn [_] (ef/log-debug "Error while downloading bookmarks.")))))
 
-(declare render-tag-menu-element clean-tags-menu)
 (defn fetch-tags
   "Retrieves all currently existing tags of user from DB."
-  []
-  (remote/request
-   [:get "/_/tags"]
-   :headers {"Content-Type" "application/edn;charset=utf-8"}
-   :on-success
-   (fn [{tags-str :body}]
-     (let [tags (r/read-string tags-str)]
-       (clean-tags-menu)
-       (render-tag-menu-element nil)
-       (doseq [tag tags] (render-tag-menu-element tag))))))
+  [{:keys [update-tag-menu?]}]
+  (when update-tag-menu?
+    (remote/request
+     [:get "/_/tags"]
+     :headers {"Content-Type" "application/edn;charset=utf-8"}
+     :on-success
+     (fn [{tags-str :body}]
+       (let [tags (r/read-string tags-str)]
+         (publish-tags-menu-change (->TagMenuChange nil true))
+         (doseq [tag tags]
+           (publish-tags-menu-change (->TagMenuChange tag false)))))
+     :on-error
+     (fn [_] (ef/log-debug "Error while downloading tags menu.")))))
 
 (defn add-bookmark!
   "Adds bookmark for current user in DB."
   [link]
   (remote/request
-   [:post "/_/add-bookmark"]
+   [:post "/_/bookmarks"]
    :headers {"Content-Type" "application/edn;charset=utf-8"}
    :content (pr-str {:link link})
    :on-success
    (fn [{bookmark :body}]
      (let [b (r/read-string bookmark)]
-       (publish-bookmark (->BookmarkEvent (:link b) true []))))
+       (publish-bookmark (->BookmarkAddedEvent (:link b) true []))))
    :on-error
    (fn [{status :status}]
      (condp = status
        409 (new-link-validation-failed "Bookmark already exists.")
        422 (new-link-validation-failed "Incorrect URL.")))))
 
-;;; TODO on-success, on-error
 (defn remove-bookmark!
   "Adds bookmark for current user in DB."
-  [link]
+  [link node]
   (remote/request
-   [:delete "/_/delete-bookmark"]
+   [:delete "/_/bookmarks"]
    :headers {"Content-Type" "application/edn;charset=utf-8"}
-   :content (pr-str {:link link})))
+   :content (pr-str {:link link})
+   :on-success
+   (fn [_] (publish-bookmark-removed (->BookmarkRemovedEvent node)))
+   :on-error
+   (fn [_] (ef/log-debug "Error while deleting bookmark."))))
 
-(declare render-tag)
-;;; TODO on-success, on-error, pubsub
-;;; TODO tag validation
 (defn add-tag!
   "Tags a link for current user."
   [tag link node]
   (remote/request
-   [:post "/_/add-tag"]
+   [:post "/_/tags"]
    :headers {"Content-Type" "application/edn;charset=utf-8"}
    :content (pr-str {:link link :tag tag})
    :on-success
-   (fn [resp] (do (fetch-tags) (render-tag node link tag)))
+   (fn [_] (publish-tag (->TagAddedEvent node link tag true)))
    :on-error
    (fn [_] (ef/log-debug "error"))))
 
 (defn remove-tag!
   "Untags a link for current user."
-  [tag link]
+  [tag link node]
   (remote/request
-   [:delete "/_/remove-tag"]
+   [:delete "/_/tags"]
    :headers {"Content-Type" "application/edn;charset=utf-8"}
-   :content (pr-str {:link link :tag tag})))
+   :content (pr-str {:link link :tag tag})
+   :on-success
+   (fn [_] (publish-tag-removed (->TagRemovedEvent node)))
+   :on-error
+   (fn [_] (ef/log-debug "Error while deleting tag."))))
 
 ;;; ## DOM handling/rendering code
 
@@ -208,9 +247,9 @@
 ;;; TODO show title of page, not link itself
 (defn bookmark-div
   "Creates a bookmark HTML element."
-  [link tags popup-id]
+  [link tags bookmark-id popup-id]
   (template/node
-   [:div.bookmark.well.well-small
+   [:div.bookmark.well.well-small {:id bookmark-id}
     [:div [:a {:href link :target "_blank"} link]
      [:button.close.btn-danger.delete-bookmark! "Delete"]]
     [:div.tags [:i.icon-tags] "Tags: "
@@ -220,70 +259,59 @@
       [:i.icon-plus]]
      (add-tag-popup popup-id link)]]))
 
-(defn render-tag [node link tag]
+(defn render-tag [{:keys [node link tag]}]
   (let [tag-node (tag-element tag)]
-    (ef/at
-     node
-     [".tags-list"]
-     (ef/prepend tag-node))
+    (ef/at node [".tags-list"] (ef/prepend tag-node))
     (ef/at tag-node
            [".remove-tag!"]
-           (events/listen
-            :click
-            ;; TODO use pubsub
-            (fn [event]
-              (remove-tag! tag link)
-              (ef/at (get-grandparent (.-currentTarget event))
-                     (ef/remove-node)))))
-    (ef/at tag-node
+           (events/listen :click (fn [event] (remove-tag! tag link tag-node)))
+
            [".set-tag!"]
            (events/listen
             :click
-            ;; TODO use pubsub
-            (fn [event]
-              (set-tag! tag)
-              (remove-all-bookmarks)
-              (fetch-bookmarks))))))
+            (fn [event] (publish-tag-changed (->TagChangedEvent tag)))))))
 
-;;; TODO remove handler when deleting
+(defn refetch-bookmarks [_]
+  (remove-all-bookmarks)
+  (fetch-bookmarks))
+
+;;; TODO tag validation
 ;;; Render a bookmark.
 (defn render-bookmark [{:keys [link new? tags]}]
-  (let [popup-id (generate-popup-id link)
-        n (bookmark-div link tags popup-id)]
+  (let [id (generate-id link)
+        popup-id (str "modal-" id)
+        bookmark-id (str "bookmark-" id)
+        n (bookmark-div link tags bookmark-id popup-id)]
     (ef/at js/document
            ["#bookmarks"]
-           (let [adder (if new? ef/prepend ef/append)]
-             (adder n)))
-    (ef/at
-     n
-     [".delete-bookmark!"]
-     (events/listen
-      :click
-      (fn [event]
-        (remove-bookmark! link)
-        ;; TODO use pubsub
-        (bookmark-removed! event)
-        (ef/at (get-grandparent (.-currentTarget event)) (ef/remove-node))))
-     [(str "#" popup-id " .btn")]
-     (events/listen
-      :click
-      ;; TODO use pubsub
-      (fn [event]
-        (let [tag
-              (:tag
-               (read-tag-to-add (get-grandparent (.-currentTarget event))))]
-          (add-tag! tag link n)))))
-    (when (not (empty? tags))
-      (doall (map (partial render-tag n link) tags)))))
+           (let [adder (if new? ef/prepend ef/append)] (adder n))
 
-(defn clean-tags-menu []
-  (ef/at js/document
-         ["#tags"]
-         (ef/content "")))
+           [(str "#" bookmark-id " .delete-bookmark!")]
+           (events/listen :click (fn [event] (remove-bookmark! link n)))
+
+           [(str "#" popup-id " .btn")]
+           (events/listen
+            :click
+            (fn [event]
+              (let [tag
+                    (:tag
+                     (read-tag-to-add (get-grandparent (.-currentTarget event))))]
+                (add-tag! tag link n)))))
+    (when (not (empty? tags))
+      (doall (map #(publish-tag (->TagAddedEvent n link % false)) tags)))))
+
+;;; TODO remove handler when deleting
+(defn remove-node [{:keys [node]}] (ef/at node (ef/remove-node)))
+
+(defn clean-tags-menu [{:keys [reset-menu?]}]
+  (when reset-menu?
+    (ef/at js/document
+           ["#tags"]
+           (ef/content ""))))
 
 ;;; TODO ability to delete tags completely
 ;;; TODO 'unselect' link after click
-(defn render-tag-menu-element [tag]
+(defn render-tag-menu-element [{:keys [tag reset-menu?]}]
   (let [tag-node (tag-link tag)]
     (ef/at js/document
            ["#tags"]
@@ -292,12 +320,7 @@
            [".set-tag!"]
            (events/listen
             :click
-            ;; TODO use pubsub
-            (fn [event]
-              (ef/log-debug "click")
-              (set-tag! tag)
-              (remove-all-bookmarks)
-              (fetch-bookmarks))))))
+            (fn [event] (publish-tag-changed (->TagChangedEvent tag)))))))
 
 ;;; ## Events
 
@@ -341,10 +364,18 @@
   (subscribe-to-bookmarks bookmark-fetched!)
   (subscribe-to-bookmarks new-link-validation-succeeded)
   (subscribe-to-bookmarks render-bookmark)
+  (subscribe-to-bookmarks-removed remove-node)
+  (subscribe-to-tags-menu-changes clean-tags-menu)
+  (subscribe-to-tags-menu-changes render-tag-menu-element)
+  (subscribe-to-tags render-tag)
+  (subscribe-to-tags fetch-tags)
+  (subscribe-to-tags-removed remove-node)
+  (subscribe-to-tag-changed set-tag!)
+  (subscribe-to-tag-changed refetch-bookmarks)
   (add-new-link-click-handler)
-  (brepl/connect)
-  (fetch-tags)
+  (fetch-tags {:update-tag-menu? true})
   (fetch-bookmarks)
-  (set! (.-onscroll js/window) on-scroll))
+  (set! (.-onscroll js/window) on-scroll)
+  (brepl/connect))
 
 (set! (.-onload js/window) start)
