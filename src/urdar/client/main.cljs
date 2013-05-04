@@ -27,6 +27,7 @@
   (p/subscribe-to-tags d/render-tag)
   (p/subscribe-to-tags r/fetch-tags)
   (p/subscribe-to-tags-removed d/remove-node)
+  (p/subscribe-to-tags-removed r/fetch-tags)
   (p/subscribe-to-tag-changed s/set-tag!)
   (p/subscribe-to-tag-changed refetch-bookmarks)
   (d/add-new-link-click-handler)

@@ -45,7 +45,7 @@
 
 (defn fetch-tags
   "Retrieves all currently existing tags of user from DB."
-  [{:keys [update-tag-menu?]}]
+  [{:keys [update-tag-menu?] :or {update-tag-menu? true}}]
   (when update-tag-menu?
     (remote/request
      [:get "/_/tags"]

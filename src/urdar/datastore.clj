@@ -18,8 +18,8 @@
   (tag-exists? [self e-mail tag]
     "Checks whether given tag exists for a given user.")
   (get-tags [self e-mail] "Retrieves all tags of given user.")
-  (create-tag [self e-mail tag]
-    "Creates tag for given user.")
+  (create-tag [self e-mail tag] "Creates tag for given user.")
+  (delete-tag [self e-mail tag] "Deletes tag for given user.")
   (link-exists? [self link] "Checks whether given link already added.")
   (bookmark-exists? [self e-mail link]
     "Checks whether given link is already bookmarked by user.")
@@ -31,7 +31,9 @@
   (bookmark-tagged? [self e-mail tag link]
     "Checks whether given link has given tag.")
   (tag-bookmark [self e-mail tag link] "Adds tag to given link.")
-  (untag-bookmark [self e-mail tag link] "Removes tag from given link.")
+  (untag-bookmark [self e-mail tag link]
+    "Removes tag from given link. If no other link is tagged by this tag, also
+    removes tag itself.")
   (get-bookmarks [self e-mail] [self e-mail skip quant]
     "Retrieves all or quant number of bookmarks (instances of Bookmark) of
     given user sorted by their creation date (descending), optionally
@@ -62,6 +64,10 @@
      nj/tags-index
      (nj/get-user-node nj/users-index e-mail)
      tag))
+  (delete-tag [_ e-mail tag]
+    (let [tag-node
+          (nj/get-tag-node nj/tags-index e-mail tag)]
+      (nj/delete-tag tag-node)))
   (link-exists? [_ link]
     (not (nil? (nj/get-link-node nj/links-index link))))
   (bookmark-exists? [_ e-mail link]
@@ -89,8 +95,11 @@
       (nj/tag-bookmark-node tag-node link-node)))
   (untag-bookmark [self e-mail tag link]
     (let [tag-node (nj/get-tag-node nj/tags-index e-mail tag)
-          link-node (nj/get-link-node nj/links-index link)]
-      (nj/untag-bookmark-node tag-node link-node)))
+          link-node (nj/get-link-node nj/links-index link)
+          user-node (nj/get-user-node nj/users-index e-mail)]
+      (nj/untag-bookmark-node tag-node link-node)
+      (when-not (nj/any-bookmarks-tagged? user-node tag-node)
+        (nj/delete-tag tag-node))))
   (get-bookmarks [_ e-mail skip quant]
     (letfn [(cypher-res->Bookmark [res]
               (->Bookmark e-mail (get res "bookmark.link")
