@@ -29,7 +29,7 @@
 (defn read-tag-to-add
   "Reads a current value of link in text field."
   [node]
-  (ef/from node :tag [".tag"] (ef/get-prop :value)))
+  (ef/from node :tag [".new-tag"] (ef/get-prop :value)))
 
 (defn read-tag-to-remove
   "Reads a current value of link in text field."
@@ -58,9 +58,12 @@
      [:button.close {:data-dismiss "modal"} "x"]]
     [:div.row-fluid
      [:div.modal-body
-      [:div.span8.offset3 [:input.tag {:type "text" :placeholder "tag"}]]
-      [:div.span8.offset4
-       [:button.btn.btn-primary {:type "submit"} "Add tag"]]]]]))
+      [:div.control-group.new-tag-cg
+       [:div.controls
+        [:div.span8.offset3 [:input.new-tag {:type "text" :placeholder "tag"}]]
+        [:div.span8.offset2 [:span.help-inline.hidden.new-tag-error]]]
+       [:div.span8.offset4
+        [:button.btn.btn-primary {:type "submit"} "Add tag"]]]]]]))
 
 (defn tag-link [tag]
   (let [[tag-link tag-text] (if tag
@@ -106,7 +109,6 @@
             :click
             (fn [event] (p/publish-tag-changed (p/->TagChangedEvent tag)))))))
 
-;;; TODO tag validation
 ;;; Render a bookmark.
 (defn render-bookmark [{:keys [link new? tags]}]
   (let [id (s/generate-id link)
@@ -124,10 +126,13 @@
            (events/listen
             :click
             (fn [event]
-              (let [tag
-                    (:tag
-                     (read-tag-to-add (get-grandparent (.-currentTarget event))))]
-                (r/add-tag! tag link n)))))
+              (let [tag (:tag (read-tag-to-add n))]
+                (if (v/valid-tag? tag)
+                  (r/add-tag! tag link n)
+                  (r/new-tag-validation-failed n (str "Tag should contain "
+                                                      "only alphanumeric "
+                                                      "characters, dashes  "
+                                                      "and underscores.")))))))
     (when (not (empty? tags))
       (doall (map #(p/publish-tag (p/->TagAddedEvent n link % false)) tags)))))
 

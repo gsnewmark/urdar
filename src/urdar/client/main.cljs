@@ -27,6 +27,7 @@
   (p/subscribe-to-tags-menu-changes d/render-tag-menu-element)
   (p/subscribe-to-tags d/render-tag)
   (p/subscribe-to-tags r/fetch-tags)
+  (p/subscribe-to-tags r/new-tag-validation-succeeded)
   (p/subscribe-to-tags-removed d/remove-node)
   (p/subscribe-to-tags-removed r/fetch-tags)
   (p/subscribe-to-tag-changed s/set-tag!)

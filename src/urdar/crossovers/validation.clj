@@ -2,9 +2,14 @@
   "Functions to validate input.")
 
 
-;;; TODO use correct regex (this one doesn't allow dashes)
 (defn valid-url?
-  "Validates that given string is a correct URL."
+  "Checks whether the given string is a correct URL."
   [s]
   ;; Regex from http://mathiasbynens.be/demo/url-regex by @imme_emosol
-  (seq? (re-seq #"(https?|ftp)://(-\.)?([^\s/?\.#]+\.?)+(/[^\s]*)?$" s)))
+  (re-matches #"(https?|ftp)://(-\.)?([^\s/?\.#]+\.?)+(/[^\s]*)?$" s))
+
+;;; TODO find way to specify end/start of string (which works in cljs)
+(defn valid-tag?
+  "Checks whether the given string is a correct tag."
+  [s]
+  (re-matches #"^[\w-]+$" s))

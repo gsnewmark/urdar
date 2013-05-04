@@ -20,6 +20,17 @@
   ["#add-bookmark-error"] (ef/add-class "hidden")
   ["#add-bookmark"] (ef/remove-class "error"))
 
+(defn new-tag-validation-failed [node error-msg]
+  (ef/at node
+   [".new-tag-cg"] (ef/add-class "error")
+   [".new-tag-error"] (ef/do-> (ef/content error-msg)
+                           (ef/remove-class "hidden"))))
+
+(defn new-tag-validation-succeeded [{:keys [node]}]
+  (ef/at node
+   [".new-tag-cg"] (ef/remove-class "error")
+   [".new-tag-error"] (ef/add-class "hidden")))
+
 ;;;--------------------------------------------------------------------------
 
 ;;; TODO more elaborate error handling for remotes
@@ -98,7 +109,10 @@
    :on-success
    (fn [_] (p/publish-tag (p/->TagAddedEvent node link tag true)))
    :on-error
-   (fn [_] (ef/log-debug "error"))))
+   (fn [{status :status}]
+     (condp = status
+       422 (new-tag-validation-failed node "Incorrect tag.")
+       302 (new-tag-validation-failed node "Tag already exists.")))))
 
 (defn remove-tag!
   "Untags a link for current user."

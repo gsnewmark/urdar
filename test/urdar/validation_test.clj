@@ -23,3 +23,19 @@
   (is (not (v/valid-url? "httpss://bar.baz")) "Invalid protocol specifier")
   (is (not (v/valid-url? "http://.bar.com"))
       "Link with dot placed in its beginning"))
+
+(deftest valid-tag
+  (is (v/valid-tag? "tag") "Ordinary word")
+  (is (v/valid-tag? "tag1") "Word with number")
+  (is (v/valid-tag? "tag-with-dashes") "Word with dashes")
+  (is (v/valid-tag? "123") "Number")
+  (is (v/valid-tag? "tag_with_underscore") "Word with underscores")
+  (is (v/valid-tag? "tag_with_underscore-and-dash")
+      "Word with underscores and dashes")
+  (is (v/valid-tag? "tag_1") "Word with underscore and number")
+  (is (v/valid-tag? "tag-1") "Word with dash and number"))
+
+(deftest invalid-tag
+  (is (not (v/valid-tag? "")) "Empty tag")
+  (is (not (v/valid-tag? "tag#")) "Word with special symbol")
+  (is (not (v/valid-tag? "tag 1")) "Word with spaces"))

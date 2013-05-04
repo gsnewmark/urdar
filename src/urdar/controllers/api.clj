@@ -46,7 +46,7 @@
         (edn-response :status 204))))
 
 (defn add-tag! [e-mail tag link]
-  (if-not (and e-mail tag link)
+  (if-not (and e-mail tag link (v/valid-tag? tag))
     (edn-response :status 422)
     (if (not (nil? (ds/tag-bookmark ds/datastore e-mail tag link)))
       (edn-response :status 204 :body {:tag tag})
