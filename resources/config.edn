@@ -23,4 +23,9 @@
  {:url "http://localhost:7474/db/data"
   :login ""
   :password ""}
+
+ ;; Data for new user
+ :new-user-first-entry
+ {:link "https://github.com/gsnewmark/urdar"
+  :tag "open-source"}
 }
