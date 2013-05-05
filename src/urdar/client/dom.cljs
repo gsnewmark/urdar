@@ -19,6 +19,11 @@
 
 (def get-grandparent (comp get-parent get-parent))
 
+(defn generate-enter-up-listener
+  [f]
+  (events/listen
+   :keyup (fn [e] (when (= 13 (or (.-keyCode e) (.-which e))) (f e)))))
+
 (defn read-link-to-add
   "Reads a current value of link in text field."
   []
@@ -66,7 +71,8 @@
      [:div.modal-body
       [:div.control-group.new-tag-cg
        [:div.controls
-        [:div.span8.offset3 [:input.new-tag {:type "text" :placeholder "tag"}]]
+        [:div.span8.offset3
+         [:input.new-tag {:type "text" :placeholder "tag"}]]
         [:div.span8.offset2 [:span.help-inline.hidden.new-tag-error]]]
        [:div.span8.offset4
         [:button.btn.btn-primary {:type "submit"} "Add tag"]]]]]]))
@@ -122,6 +128,13 @@
             :click
             (fn [event] (p/publish-tag-changed (p/->TagChangedEvent tag)))))))
 
+(defn- add-tag-clicked
+  [link n event]
+  (let [tag (read-tag-to-add n)]
+    (if (v/valid-tag? tag)
+      (r/add-tag! tag link n)
+      (r/new-tag-validation-failed n))))
+
 ;;; Render a bookmark.
 (defn render-bookmark [{:keys [link new? tags]}]
   (let [id (s/generate-id link)
@@ -144,14 +157,13 @@
                   (r/new-tag-validation-succeeded {:node n})
                   (r/new-tag-validation-failed n)))))
 
+           [(str "#" popup-id " .new-tag")]
+           (generate-enter-up-listener (partial add-tag-clicked link n))
+
            [(str "#" popup-id " .btn")]
            (events/listen
             :click
-            (fn [event]
-              (let [tag (read-tag-to-add n)]
-                (if (v/valid-tag? tag)
-                  (r/add-tag! tag link n)
-                  (r/new-tag-validation-failed n))))))
+            (partial add-tag-clicked link n)))
     (when (not (empty? tags))
       (doall (map #(p/publish-tag (p/->TagAddedEvent n link % false)) tags)))))
 
@@ -170,17 +182,22 @@
 
 ;;; ## Event handlers
 
+(defn- add-new-link-clicked
+  [event]
+  (let [link (read-link-to-add)
+        link (if (and (not= (.indexOf link "http://") 0)
+                      (not= (.indexOf link "https://") 0))
+               (str "http://" link)
+               link)]
+    (if (v/valid-url? link)
+      (r/add-bookmark! link)
+      (r/new-link-validation-failed "Incorrect URL."))))
+
 ;;; Publishes a newly added link when users clicks on the button.
 (em/defaction add-new-link-handlers []
+  ["#link-to-add"]
+  (generate-enter-up-listener add-new-link-clicked)
   ["#add-bookmark!"]
   (events/listen
    :click
-   (fn [event]
-     (let [link (read-link-to-add)
-           link (if (and (not= (.indexOf link "http://") 0)
-                         (not= (.indexOf link "https://") 0))
-                  (str "http://" link)
-                  link)]
-       (if (v/valid-url? link)
-         (r/add-bookmark! link)
-         (r/new-link-validation-failed "Incorrect URL."))))))
+   add-new-link-clicked))
