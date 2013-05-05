@@ -36,7 +36,6 @@
    [".new-tag-cg"] (ef/remove-class "error")
    [".new-tag-error"] (ef/add-class "hidden")))
 
-
 ;;;--------------------------------------------------------------------------
 
 ;;; TODO more elaborate error handling for some remotes

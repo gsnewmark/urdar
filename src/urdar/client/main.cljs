@@ -12,8 +12,6 @@
   (d/remove-all-bookmarks)
   (r/fetch-bookmarks))
 
-
-
 (defn items-to-fetch []
   (-> (es/document-height)
       (/ 350.0)

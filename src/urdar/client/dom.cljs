@@ -167,7 +167,6 @@
     (when (not (empty? tags))
       (doall (map #(p/publish-tag (p/->TagAddedEvent n link % false)) tags)))))
 
-;;; TODO 'unselect' link after click
 (defn render-tag-menu-element [{:keys [tag reset-menu?]}]
   (let [selected? (and tag (s/tag-selected? tag))
         tag-node (tag-link tag true selected?)]
