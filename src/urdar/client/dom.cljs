@@ -135,6 +135,15 @@
            [(str "#" bookmark-id " .delete-bookmark!")]
            (events/listen :click (fn [event] (r/remove-bookmark! link n)))
 
+           [(str "#" popup-id " .new-tag")]
+           (events/listen
+            :input
+            (fn [event]
+              (let [tag (read-tag-to-add n)]
+                (if (or (empty? tag) (v/valid-tag? tag))
+                  (r/new-tag-validation-succeeded {:node n})
+                  (r/new-tag-validation-failed n)))))
+
            [(str "#" popup-id " .btn")]
            (events/listen
             :click
@@ -142,11 +151,7 @@
               (let [tag (read-tag-to-add n)]
                 (if (v/valid-tag? tag)
                   (r/add-tag! tag link n)
-                  (r/new-tag-validation-failed n (str "Tag should contain "
-                                                      "no more than 50 "
-                                                      "alphanumeric "
-                                                      "characters, dashes  "
-                                                      "or underscores.")))))))
+                  (r/new-tag-validation-failed n))))))
     (when (not (empty? tags))
       (doall (map #(p/publish-tag (p/->TagAddedEvent n link % false)) tags)))))
 
@@ -166,7 +171,7 @@
 ;;; ## Event handlers
 
 ;;; Publishes a newly added link when users clicks on the button.
-(em/defaction add-new-link-click-handler []
+(em/defaction add-new-link-handlers []
   ["#add-bookmark!"]
   (events/listen
    :click

@@ -12,11 +12,22 @@
   (d/remove-all-bookmarks)
   (r/fetch-bookmarks))
 
+
+
+(defn items-to-fetch []
+  (-> (es/document-height)
+      (/ 350.0)
+      js/Math.ceil
+      (* 4)
+      js/Math.floor
+      inc))
+
 ;;; ## Application starter
 
 (defn ^:export start
   "Starts required listeners."
   []
+  (s/set-bookmarks-to-fetch (items-to-fetch))
   (p/subscribe-to-bookmarks s/bookmark-fetched!)
   (p/subscribe-to-bookmarks r/new-link-validation-succeeded)
   (p/subscribe-to-bookmarks d/render-bookmark)
@@ -35,10 +46,11 @@
   (p/subscribe-to-tag-changed s/set-tag!)
   (p/subscribe-to-tag-changed refetch-bookmarks)
   (p/subscribe-to-tag-changed d/tag-filter-selected)
-  (d/add-new-link-click-handler)
+  (d/add-new-link-handlers)
   (r/fetch-tags {:update-tag-menu? true})
   (r/fetch-bookmarks)
   (set! (.-onscroll js/window) (es/generate-on-scroll r/fetch-bookmarks))
+  (set! (.-onresize js/window) #(s/set-bookmarks-to-fetch (items-to-fetch)))
   (brepl/connect))
 
 (set! (.-onload js/window) start)

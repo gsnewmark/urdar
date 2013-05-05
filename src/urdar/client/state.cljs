@@ -10,6 +10,9 @@
 (defn bookmark-removed! [_]
   (swap! state update-in [:bookmarks-fetched] dec))
 
+(defn set-bookmarks-to-fetch [n]
+  (swap! state assoc :bookmarks-to-fetch n))
+
 (defn tag-selected? [tag] (= (:tag @state) tag))
 
 (defn set-tag! [{:keys [tag]}]
