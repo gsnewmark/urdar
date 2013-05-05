@@ -10,7 +10,7 @@
 (defn bookmark-removed! [_]
   (swap! state update-in [:bookmarks-fetched] dec))
 
-(defn check-tag [tag] (= (:tag @state) tag))
+(defn tag-selected? [tag] (= (:tag @state) tag))
 
 (defn set-tag! [{:keys [tag]}]
   ;; TODO should be one swap! call

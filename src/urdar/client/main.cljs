@@ -34,6 +34,7 @@
   (p/subscribe-to-tags-removed s/unset-tag!)
   (p/subscribe-to-tag-changed s/set-tag!)
   (p/subscribe-to-tag-changed refetch-bookmarks)
+  (p/subscribe-to-tag-changed d/tag-filter-selected)
   (d/add-new-link-click-handler)
   (r/fetch-tags {:update-tag-menu? true})
   (r/fetch-bookmarks)

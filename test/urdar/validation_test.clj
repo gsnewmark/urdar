@@ -38,4 +38,6 @@
 (deftest invalid-tag
   (is (not (v/valid-tag? "")) "Empty tag")
   (is (not (v/valid-tag? "tag#")) "Word with special symbol")
-  (is (not (v/valid-tag? "tag 1")) "Word with spaces"))
+  (is (not (v/valid-tag? "tag 1")) "Word with spaces")
+  (is (not (v/valid-tag? "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+      "Word with too many characters"))

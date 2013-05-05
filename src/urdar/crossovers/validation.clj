@@ -12,4 +12,4 @@
 (defn valid-tag?
   "Checks whether the given string is a correct tag."
   [s]
-  (re-matches #"^[\w-]+$" s))
+  (re-matches #"^[\w-]{1,50}$" s))

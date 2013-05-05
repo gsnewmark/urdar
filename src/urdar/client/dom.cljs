@@ -22,19 +22,15 @@
 (defn read-link-to-add
   "Reads a current value of link in text field."
   []
-  (ef/from js/document
-           :link ["#control-panel #add-bookmark #link-to-add"]
-           (ef/get-prop :value)))
+  (string/trim
+   (:link (ef/from js/document
+                   :link ["#control-panel #add-bookmark #link-to-add"]
+                   (ef/get-prop :value)))))
 
 (defn read-tag-to-add
   "Reads a current value of link in text field."
   [node]
-  (ef/from node :tag [".new-tag"] (ef/get-prop :value)))
-
-(defn read-tag-to-remove
-  "Reads a current value of link in text field."
-  [node]
-  (ef/from node :tag [".tag"] (ef/get-text)))
+  (string/trim (:tag (ef/from node :tag [".new-tag"] (ef/get-prop :value)))))
 
 (em/defaction remove-all-bookmarks []
   [".bookmark"] (ef/remove-node))
@@ -43,7 +39,7 @@
 (defn remove-node [{:keys [node]}] (ef/at node (ef/remove-node)))
 
 (defn remove-tag-node [{:keys [node tag] :as e}]
-  (if (s/check-tag tag)
+  (if (s/tag-selected? tag)
     (p/publish-bookmark-removed
      (p/->BookmarkRemovedEvent (get-parent (get-grandparent node)) false))
     (remove-node e)))
@@ -53,6 +49,10 @@
     (ef/at js/document
            ["#tags"]
            (ef/content ""))))
+
+(em/defaction tag-filter-selected [{:keys [tag]}]
+  [".tag-filter"] (ef/remove-class "btn-success")
+  [(str "#" tag)] (when tag (ef/add-class "btn-success")))
 
 ;;; ## Templates
 
@@ -72,12 +72,16 @@
         [:button.btn.btn-primary {:type "submit"} "Add tag"]]]]]]))
 
 (defn tag-link
-  ([tag] (tag-link tag false))
-  ([tag button?]
-     (let [[tag-link tag-text btn-s] (if tag
-                                 [(str "#" tag) tag ".btn-primary"]
-                                 ["#" "Remove tag filtering" ".btn-danger"])
-           span (keyword (str "span.tag" (when button? (str ".btn" btn-s))))]
+  ([tag] (tag-link tag false false))
+  ([tag button? selected?]
+     (let [[tag-link tag-text btn-s]
+           (if tag
+             [(str "#" tag) tag ".btn-primary"]
+             ["#" "Remove tag filtering" ".btn-danger"])
+           span (keyword
+                 (str "span.tag-filter"
+                      (when button? (str ".btn" btn-s tag-link
+                                         (when selected? ".btn-success")))))]
        (template/node
         [:span [:a.set-tag! {:href tag-link} [span tag-text]]]))))
 
@@ -135,19 +139,21 @@
            (events/listen
             :click
             (fn [event]
-              (let [tag (:tag (read-tag-to-add n))]
+              (let [tag (read-tag-to-add n)]
                 (if (v/valid-tag? tag)
                   (r/add-tag! tag link n)
                   (r/new-tag-validation-failed n (str "Tag should contain "
-                                                      "only alphanumeric "
+                                                      "no more than 50 "
+                                                      "alphanumeric "
                                                       "characters, dashes  "
-                                                      "and underscores.")))))))
+                                                      "or underscores.")))))))
     (when (not (empty? tags))
       (doall (map #(p/publish-tag (p/->TagAddedEvent n link % false)) tags)))))
 
 ;;; TODO 'unselect' link after click
 (defn render-tag-menu-element [{:keys [tag reset-menu?]}]
-  (let [tag-node (tag-link tag true)]
+  (let [selected? (and tag (s/tag-selected? tag))
+        tag-node (tag-link tag true selected?)]
     (ef/at js/document
            ["#tags"]
            (ef/append tag-node " "))
@@ -165,8 +171,7 @@
   (events/listen
    :click
    (fn [event]
-     (let [link (-> (:link (read-link-to-add))
-                    string/trim)
+     (let [link (read-link-to-add)
            link (if (and (not= (.indexOf link "http://") 0)
                          (not= (.indexOf link "https://") 0))
                   (str "http://" link)
