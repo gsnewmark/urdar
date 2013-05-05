@@ -6,10 +6,10 @@
             [shoreleave.pubsubs.publishable]))
 
 (defrecord BookmarkAddedEvent [link new? tags])
-(defrecord BookmarkRemovedEvent [node])
+(defrecord BookmarkRemovedEvent [node update-tag-menu?])
 (defrecord TagMenuChange [tag reset-menu?])
 (defrecord TagAddedEvent [node link tag update-tag-menu?])
-(defrecord TagRemovedEvent [node])
+(defrecord TagRemovedEvent [tag node])
 (defrecord TagChangedEvent [tag])
 
 (def ^{:private true} bus (pbus/bus))

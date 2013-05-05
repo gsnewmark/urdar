@@ -42,6 +42,12 @@
 ;;; TODO remove handler when deleting
 (defn remove-node [{:keys [node]}] (ef/at node (ef/remove-node)))
 
+(defn remove-tag-node [{:keys [node tag] :as e}]
+  (if (s/check-tag tag)
+    (p/publish-bookmark-removed
+     (p/->BookmarkRemovedEvent (get-parent (get-grandparent node)) false))
+    (remove-node e)))
+
 (defn clean-tags-menu [{:keys [reset-menu?]}]
   (when reset-menu?
     (ef/at js/document
@@ -65,12 +71,15 @@
        [:div.span8.offset4
         [:button.btn.btn-primary {:type "submit"} "Add tag"]]]]]]))
 
-(defn tag-link [tag]
-  (let [[tag-link tag-text] (if tag
-                              [(str "#" tag) tag]
-                              ["#" "Remove tag filtering"])]
-    (template/node
-     [:span [:a.set-tag! {:href tag-link} [:span.tag tag-text]]])))
+(defn tag-link
+  ([tag] (tag-link tag false))
+  ([tag button?]
+     (let [[tag-link tag-text btn-s] (if tag
+                                 [(str "#" tag) tag ".btn-primary"]
+                                 ["#" "Remove tag filtering" ".btn-danger"])
+           span (keyword (str "span.tag" (when button? (str ".btn" btn-s))))]
+       (template/node
+        [:span [:a.set-tag! {:href tag-link} [span tag-text]]]))))
 
 (defn tag-element
   "Creates a HTML element for tag."
@@ -138,10 +147,10 @@
 
 ;;; TODO 'unselect' link after click
 (defn render-tag-menu-element [{:keys [tag reset-menu?]}]
-  (let [tag-node (tag-link tag)]
+  (let [tag-node (tag-link tag true)]
     (ef/at js/document
            ["#tags"]
-           (ef/prepend tag-node " "))
+           (ef/append tag-node " "))
     (ef/at tag-node
            [".set-tag!"]
            (events/listen

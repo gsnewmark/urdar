@@ -96,7 +96,7 @@
    :headers {"Content-Type" "application/edn;charset=utf-8"}
    :content (pr-str {:link link})
    :on-success
-   (fn [_] (p/publish-bookmark-removed (p/->BookmarkRemovedEvent node)))
+   (fn [_] (p/publish-bookmark-removed (p/->BookmarkRemovedEvent node true)))
    :on-error
    (fn [_] (ef/log-debug "Error while deleting bookmark."))))
 
@@ -123,6 +123,6 @@
    :headers {"Content-Type" "application/edn;charset=utf-8"}
    :content (pr-str {:link link :tag tag})
    :on-success
-   (fn [_] (p/publish-tag-removed (p/->TagRemovedEvent node)))
+   (fn [_] (p/publish-tag-removed (p/->TagRemovedEvent tag node)))
    :on-error
    (fn [_] (ef/log-debug "Error while deleting tag."))))
