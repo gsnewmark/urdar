@@ -2,7 +2,8 @@
   (:require [urdar.client.pubsub :as p]))
 
 ;;; TODO bookmarks-to-fetch should be based on screen height
-(def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 20 :tag nil}))
+(def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 20 :tag nil
+                  :bookmarks-id 0}))
 
 (defn bookmark-fetched! [_]
   (swap! state update-in [:bookmarks-fetched] inc))
@@ -26,5 +27,8 @@
                (< bookmarks-fetched 1))
       (p/publish-tag-changed (p/->TagChangedEvent nil)))))
 
+(defn reset-id [] (swap! state assoc :bookmarks-id 0))
+
 ;;; TODO incorrect - will produce identical IDs when page is refreshed
-(defn generate-id [link] (:bookmarks-fetched @state))
+(defn generate-id [link]
+  (:bookmarks-id (swap! state update-in [:bookmarks-id] inc)))

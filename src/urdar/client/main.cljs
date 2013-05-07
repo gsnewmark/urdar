@@ -25,6 +25,7 @@
 (defn ^:export start
   "Starts required listeners."
   []
+  (s/reset-id)
   (s/set-bookmarks-to-fetch (items-to-fetch))
   (p/subscribe-to-bookmarks s/bookmark-fetched!)
   (p/subscribe-to-bookmarks r/new-link-validation-succeeded)
