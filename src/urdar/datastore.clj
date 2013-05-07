@@ -13,12 +13,15 @@
   (user? [self e-mail]
     "Checks whether the user with given e-mail exists.")
   (create-user [self e-mail] "Creates user with given e-mail.")
+
   (tag-exists? [self e-mail tag]
     "Checks whether given tag exists for a given user.")
   (get-tags [self e-mail] "Retrieves all tags of given user.")
   (create-tag [self e-mail tag] "Creates tag for given user.")
   (delete-tag [self e-mail tag] "Deletes tag for given user.")
+
   (link-exists? [self link] "Checks whether given link already added.")
+
   (bookmark-exists? [self e-mail link]
     "Checks whether given link is already bookmarked by user.")
   (create-bookmark [self e-mail link]

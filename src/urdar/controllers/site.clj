@@ -10,7 +10,6 @@
   [e-mail]
   (let [link (get-in c/config [:new-user-first-entry :link])
         tag (get-in c/config [:new-user-first-entry :tag])]
-    (println e-mail link tag)
     (ds/create-user ds/datastore e-mail)
     (ds/create-bookmark ds/datastore e-mail link)
     (ds/tag-bookmark ds/datastore e-mail tag link)))

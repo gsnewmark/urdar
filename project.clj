@@ -15,7 +15,7 @@
                  [fogus/ring-edn "0.2.0-SNAPSHOT"]
                  [enfocus "2.0.0-SNAPSHOT"]
                  [shoreleave "0.3.0"]
-                 [prismatic/dommy "0.1.0"]]
+                 [prismatic/dommy "0.1.1"]]
   :plugins [[lein-ring "0.8.3"]
             [lein-cljsbuild "0.3.0"]
             [lein-marginalia "0.7.1"]]

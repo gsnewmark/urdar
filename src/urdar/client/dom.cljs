@@ -33,9 +33,14 @@
                    (ef/get-prop :value)))))
 
 (defn read-tag-to-add
-  "Reads a current value of link in text field."
+  "Reads a current value of link in new tag text field."
   [node]
   (string/trim (:tag (ef/from node :tag [".new-tag"] (ef/get-prop :value)))))
+
+(defn clear-input-element
+  "Clears text input field."
+  [selector {:keys [node] :or {node js/document}}]
+  (ef/at node [selector] (ef/set-prop :value "")))
 
 (em/defaction remove-all-bookmarks []
   [".bookmark"] (ef/remove-node))
@@ -149,16 +154,15 @@
            (events/listen :click (fn [event] (r/remove-bookmark! link n)))
 
            [(str "#" popup-id " .new-tag")]
-           (events/listen
-            :input
-            (fn [event]
-              (let [tag (read-tag-to-add n)]
-                (if (or (empty? tag) (v/valid-tag? tag))
-                  (r/new-tag-validation-succeeded {:node n})
-                  (r/new-tag-validation-failed n)))))
-
-           [(str "#" popup-id " .new-tag")]
-           (generate-enter-up-listener (partial add-tag-clicked link n))
+           (ef/do->
+             (generate-enter-up-listener (partial add-tag-clicked link n))
+             (events/listen
+             :input
+             (fn [event]
+               (let [tag (read-tag-to-add n)]
+                 (if (or (empty? tag) (v/valid-tag? tag))
+                   (r/new-tag-validation-succeeded {:node n})
+                   (r/new-tag-validation-failed n))))))
 
            [(str "#" popup-id " .btn")]
            (events/listen

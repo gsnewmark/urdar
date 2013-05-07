@@ -26,4 +26,5 @@
                (< bookmarks-fetched 1))
       (p/publish-tag-changed (p/->TagChangedEvent nil)))))
 
+;;; TODO incorrect - will produce identical IDs when page is refreshed
 (defn generate-id [link] (:bookmarks-fetched @state))
