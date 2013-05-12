@@ -17,7 +17,7 @@
                  [shoreleave "0.3.0"]
                  [prismatic/dommy "0.1.1"]]
   :plugins [[lein-ring "0.8.3"]
-            [lein-cljsbuild "0.3.0"]
+            [lein-cljsbuild "0.3.2"]
             [lein-marginalia "0.7.1"]]
   :main urdar.server
   :ring {:handler urdar.server/app}
