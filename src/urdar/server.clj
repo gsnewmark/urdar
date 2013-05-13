@@ -33,6 +33,8 @@
       (println (str "Response on " (java.util.Date.) ": " r))
       r)))
 
+;;; TODO middleware to catch exceptions and format them as edn response
+
 (def app
   (-> routes
       wrap-response-log
