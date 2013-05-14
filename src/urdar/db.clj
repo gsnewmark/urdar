@@ -33,8 +33,9 @@
     "Retrieves all or quant number of bookmarks (instances of Bookmark) of
     given user sorted by their creation date (descending), optionally
     skipping first skip bookmarks.")
-  (update-bookmark [self e-mail link & {:keys [title description]}]
-    "Adds a title and/or description to a given bookmark. Returns instance
+  ;; TODO find a way to make keyword arguments
+  (update-bookmark [self e-mail link title note]
+    "Adds a title and/or note to a given bookmark. Returns instance
     of Bookmark.")
   (bookmark-tagged? [self e-mail link tag]
     "Checks whether given bookmark has given tag.")
@@ -62,35 +63,50 @@
   (when-let [{:keys [title note date-added]} (:data node)]
     (->Bookmark e-mail link title note tags date-added)))
 
+;;; TODO tags
+(defn- cypher-bookmark-result->Bookmark
+  [e-mail res]
+  (let [{link "l.url" title "b.title?" note "b.note?"
+         date-added "b.date-added" :as b} res]
+    (->Bookmark e-mail link title note [] date-added)))
+
 (defrecord UserOperationsNeo4j [url login password]
   UserOperations
   (init-connection [self] (n4j/init-connection url login password) self)
-  (user-registered? [self e-mail] (not (nil? (n4j/get-user-node e-mail))))
-  (register-user [self e-mail]
+  (user-registered? [_ e-mail] (not (nil? (n4j/get-user-node e-mail))))
+  (register-user [_ e-mail]
     (when-let [node (n4j/create-user-node e-mail)] (node->User node)))
-  (unregister-user [self e-mail]
+  (unregister-user [_ e-mail]
     (when-let [node (n4j/get-user-node e-mail)] (n4j/delete-user-node node)))
-  (get-user [self e-mail]
+  (get-user [_ e-mail]
     (when-let [node (n4j/get-user-node e-mail)] (node->User node)))
-  (bookmark-exists? [self e-mail link]
-    (not (nil? (n4j/get-bookmark-node (n4j/generate-key e-mail link)))))
-  (add-bookmark [self e-mail link]
+  (bookmark-exists? [_ e-mail link]
+    (not (nil? (n4j/get-bookmark-node e-mail link))))
+  (add-bookmark [_ e-mail link]
     (let [user-node (n4j/get-user-node e-mail)
           link-node (or (n4j/get-link-node link)
                         (n4j/create-link-node link))]
       (when (and user-node link-node)
         (some->> (n4j/create-bookmark-node user-node link-node)
                  (node->Bookmark e-mail link [])))))
-  (delete-bookmark [self e-mail link]
-    (when-let [node (n4j/get-bookmark-node (n4j/generate-key e-mail link))]
+  (delete-bookmark [_ e-mail link]
+    (when-let [node (n4j/get-bookmark-node e-mail link)]
       (n4j/delete-bookmark-node node)))
-  (get-bookmark [self e-mail link]
-    (when-let [node (n4j/get-bookmark-node (n4j/generate-key e-mail link))]
+  (get-bookmark [_ e-mail link]
+    (when-let [node (n4j/get-bookmark-node e-mail link)]
       ;; TODO tags
       (node->Bookmark e-mail link [] node)))
-  (get-bookmarks [self e-mail])
-  (get-bookmarks [self e-mail skip quant])
-  (update-bookmark [self e-mail link & {:keys [title description]}])
+  (get-bookmarks [self e-mail] (get-bookmarks self e-mail nil nil))
+  (get-bookmarks [_ e-mail skip quant]
+    (map (partial cypher-bookmark-result->Bookmark e-mail)
+         (n4j/get-bookmarks-for-user e-mail [skip quant])))
+  (update-bookmark
+    [self e-mail link title note]
+    (let [bookmark-node (n4j/get-bookmark-node e-mail link)
+          data (-> {}
+                   (#(if title (assoc % :title title) %))
+                   (#(if note (assoc % :note note) %)))]
+      (n4j/update-node bookmark-node data)))
   (bookmark-tagged? [self e-mail link tag])
   (tag-bookmark [self e-mail link tag])
   (untag-bookmark [self e-mail link tag])

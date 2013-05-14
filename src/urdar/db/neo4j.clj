@@ -11,16 +11,21 @@
   (nr/connect! url login password))
 
 ;;; ## Indices
+(defonce users-index-impl (nn/create-index "users"))
+(def users-index (with-meta users-index-impl {:key "e-mail"}))
+(defonce links-index-impl (nn/create-index "links"))
+(def links-index (with-meta links-index-impl {:key "link"}))
+(defonce tags-index-impl (nn/create-index "tags"))
+(def tags-index (with-meta tags-index-impl {:key "tag"}))
+(defonce bookmarks-index-impl (nn/create-index "bookmarks"))
+(def bookmarks-index (with-meta bookmarks-index-impl {:key "bookmark"}))
 
-(defonce users-index (nn/create-index "users"))
-(defonce links-index (nn/create-index "links"))
-(defonce tags-index (nn/create-index "tags"))
-(defonce bookmarks-index (nn/create-index "bookmarks"))
+(defn- get-from-index
+  [index k v]
+  (let [key (or (:key (meta index)) k)]
+    (nn/find-one (:name index) key v)))
 
-(defn- get-from-index [index k v] (nn/find-one (:name index) k v))
-
-;;; TODO find way to make it private once again
-(defn generate-key [e-mail e] (str e-mail "+" e))
+(defn- generate-key [e-mail e] (str e-mail "+" e))
 
 (defn get-user-node
   "Retrieves user node with given e-mail from given (or default) index."
@@ -37,10 +42,13 @@
   ([e-mail tag] (get-tag-node tags-index e-mail tag))
   ([index e-mail tag] (get-from-index index "tag" (generate-key e-mail tag))))
 
+(defn- get-bookmark-node-impl [index v] (get-from-index index "bookmark" v))
+
 (defn get-bookmark-node
   "Retrieves bookmark node from given (or default) index."
-  ([v] (get-bookmark-node bookmarks-index v))
-  ([index v] (get-from-index index "bookmark" v)))
+  ([e-mail link] (get-bookmark-node bookmarks-index e-mail link))
+  ([index e-mail link]
+     (get-bookmark-node-impl index (generate-key e-mail link))))
 
 ;;; ## Entity creation
 
@@ -50,7 +58,8 @@
   key and value pair."
   [index k v exists? data]
   (when-not (exists? v)
-    (nn/create-unique-in-index (:name index) k v data)))
+    (let [key (or (:key (meta index)) k)]
+      (nn/create-unique-in-index (:name index) k v data))))
 
 (defn create-user-node
   "Creates a user as a node in graph and adds it to given (or default) index.
@@ -70,7 +79,6 @@
      (create-and-index index "link" link (partial get-link-node index)
                        {:url link :type "link"})))
 
-;;; TODO nil check
 (defn create-bookmark-node
   "Creates a bookmark as a node in graph and adds it to given (or default)
   index. Additionally creates a connection between a bookmark and a user as
@@ -81,30 +89,67 @@
   ([index user-node link-node]
      (let [e-mail (get-in user-node [:data :e-mail])
            link (get-in link-node [:data :url])
-           bookmark-node (create-and-index index "bookmark"
-                                           (generate-key e-mail link)
-                                           (partial get-bookmark-node index)
-                                           {:date-added (Date.)
-                                            :type "bookmark"})]
+
+           bookmark-node
+           (create-and-index index "bookmark" (generate-key e-mail link)
+                             (partial get-bookmark-node-impl index)
+                             {:date-added (Date.) :type "bookmark"})]
        (nrl/maybe-create user-node bookmark-node :has)
        (nrl/maybe-create bookmark-node link-node :bookmarks)
        bookmark-node)))
+
+;;; ## Queries
+
+(defn get-bookmarks-for-user
+  "Retrieves link, title, note, tags and date added for quant bookmarks
+  (ordered by date added descending - newest first) of user starting from
+  skip one."
+  ([e-mail] (get-bookmarks-for-user users-index e-mail [nil nil]))
+  ([e-mail skip-quant-vec]
+     (get-bookmarks-for-user users-index e-mail skip-quant-vec))
+  ([index e-mail [skip quant]]
+     ;; TODO remove concatenation?
+     ;; TODO tags
+     (cy/tquery (str "START user=node:" (:name index) "({key}={value}) "
+                     "MATCH (user)-[:has]->(b)-[:bookmarks]->(l) "
+                     "RETURN b.`date-added`, b.title?, b.note?, l.url "
+                     "ORDER BY `b.date-added` DESC"
+                     (when (and skip quant)
+                       (str " SKIP " skip " LIMIT " quant)))
+                {:key (or (:key (meta index)) "e-mail") :value e-mail})))
+
+;;; ## Entity update
+
+(defn update-node
+  [node data]
+  (nn/update node (merge (:data node) data)))
 
 ;;; ## Entity deletion
 
 (defn- delete-node
   "Deletes all relations with this node and then deletes the node itself."
-  [node]
+  [index node]
+  (nn/delete-from-index node (:name index))
   (nrl/purge-all node)
   (nn/delete node))
 
-(defn delete-user-node
-  [user-node]
-  ;; TODO delete all user's tags
-  ;; TODO delete all user's bookmarks
-  (delete-node user-node))
-
 (defn delete-bookmark-node
-  [bookmark-node]
-  ;; TODO remove unused tags
-  (delete-node bookmark-node))
+  ([bookmark-node] (delete-bookmark-node bookmarks-index bookmark-node))
+  ([index bookmark-node]
+     ;; TODO remove unused tags
+     (delete-node index bookmark-node)))
+
+(defn delete-user-node
+  ([user-node] (delete-user-node users-index user-node))
+  ([u-index user-node]
+     (delete-user-node u-index bookmarks-index user-node))
+  ([u-index b-index user-node]
+     ;; TODO delete all user's tags
+     (let [e-mail (get-in user-node [:data :e-mail])
+           links (map #(get % "l.url")
+                      (get-bookmarks-for-user u-index e-mail [nil nil]))
+
+           bookmark-nodes
+           (map (partial get-bookmark-node b-index e-mail) links)]
+       (doseq [n bookmark-nodes] (delete-bookmark-node b-index n))
+       (delete-node u-index user-node))))
