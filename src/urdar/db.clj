@@ -40,7 +40,7 @@
   (bookmark-tagged? [self e-mail link tag]
     "Checks whether given bookmark has given tag.")
   (tag-bookmark [self e-mail link tag]
-    "Adds tag to given bookmark. Returns instance of Bookmark.")
+    "Adds tag to given bookmark.")
   (untag-bookmark [self e-mail link tag]
     "Removes tag from given bookmark. If no other bookmark is tagged by this
     tag, also removes tag itself.")
@@ -48,8 +48,6 @@
     "Retrieves all or quant number of bookmarks (instances of Bookmark) with
     given tag of given user sorted by their creation date (descending),
     optionally skipping first skip bookmarks.")
-  (tag-exists? [self e-mail tag]
-    "Checks whether given tag exists for a given user.")
   (get-tags [self e-mail] "Returns a set of all tags of given user."))
 
 ;;; TODO maybe use constructor from map
@@ -67,8 +65,9 @@
 (defn- cypher-bookmark-result->Bookmark
   [e-mail res]
   (let [{link "l.url" title "b.title?" note "b.note?"
+         tags "COLLECT(DISTINCT t.tag?)"
          date-added "b.date-added" :as b} res]
-    (->Bookmark e-mail link title note [] date-added)))
+    (->Bookmark e-mail link title note tags date-added)))
 
 (defrecord UserOperationsNeo4j [url login password]
   UserOperations
@@ -91,11 +90,12 @@
                  (node->Bookmark e-mail link [])))))
   (delete-bookmark [_ e-mail link]
     (when-let [node (n4j/get-bookmark-node e-mail link)]
-      (n4j/delete-bookmark-node node)))
+      (n4j/delete-bookmark-node e-mail link node)))
   (get-bookmark [_ e-mail link]
     (when-let [node (n4j/get-bookmark-node e-mail link)]
       ;; TODO tags
-      (node->Bookmark e-mail link [] node)))
+      (node->Bookmark e-mail link (n4j/get-tags-for-bookmark e-mail link)
+                      node)))
   (get-bookmarks [self e-mail] (get-bookmarks self e-mail nil nil))
   (get-bookmarks [_ e-mail skip quant]
     (map (partial cypher-bookmark-result->Bookmark e-mail)
@@ -107,13 +107,22 @@
                    (#(if title (assoc % :title title) %))
                    (#(if note (assoc % :note note) %)))]
       (n4j/update-node bookmark-node data)))
-  (bookmark-tagged? [self e-mail link tag])
-  (tag-bookmark [self e-mail link tag])
-  (untag-bookmark [self e-mail link tag])
-  (get-tagged-bookmarks [self e-mail tag])
-  (get-tagged-bookmarks [self e-mail tag skip quant])
-  (tag-exists? [self e-mail tag])
-  (get-tags [self e-mail]))
+  (bookmark-tagged? [self e-mail link tag]
+    (not (nil? (n4j/get-tag-rel e-mail link tag))))
+  (tag-bookmark [self e-mail link tag]
+    (let [user-node (n4j/get-user-node e-mail)
+          bookmark-node (n4j/get-bookmark-node e-mail link)]
+      (when (and user-node bookmark-node)
+        (n4j/tag-bookmark user-node bookmark-node link tag))))
+  (untag-bookmark [self e-mail link tag]
+    (let [tag-rel (n4j/get-tag-rel e-mail link tag)]
+      (n4j/untag-bookmark tag-rel)))
+  (get-tagged-bookmarks [self e-mail tag]
+    (get-tagged-bookmarks self e-mail tag nil nil))
+  (get-tagged-bookmarks [self e-mail tag skip quant]
+    (map (partial cypher-bookmark-result->Bookmark e-mail)
+         (n4j/get-tagged-bookmarks-for-user e-mail tag [skip quant])))
+  (get-tags [self e-mail] (n4j/get-tags-for-user e-mail)))
 
 (def u
   (let [{:keys [url login password]} (:neo4j c/config)]
