@@ -3,9 +3,7 @@
             [urdar.db :as db]
             [clojurewerkz.neocons.rest :as nr]
             [clojurewerkz.neocons.rest.nodes :as nn]
-            [clojurewerkz.neocons.rest.relationships :as nrl]
-            [clojurewerkz.neocons.rest.cypher :as cy])
-  (:import [java.util Date]))
+            [clojurewerkz.neocons.rest.cypher :as cy]))
 
 (defn- init-connection
   "Initiate connection to Neo4j REST API."
@@ -31,10 +29,10 @@
 
 (defn- recreate-data-v1->v2
   [old-index]
-  (let [old-users (map #(get % "user") (retrieve-users old-index))]
+  (let [old-users (map #(get % "user") (retrieve-users-v1 old-index))]
     (doseq [u old-users]
       (let [e-mail (get-in u [:data :e-mail])
-            bookmarks (retrieve-bookmarks-for-user old-index e-mail)]
+            bookmarks (retrieve-bookmarks-for-user-v1 old-index e-mail)]
         (db/register-user e-mail)
         (doseq [b bookmarks]
           (let [{tags "COLLECT(DISTINCT tag.name?)"
