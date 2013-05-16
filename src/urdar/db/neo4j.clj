@@ -6,19 +6,19 @@
             [clojurewerkz.neocons.rest.cypher :as cy])
   (:import [java.util Date]))
 
+;;; ## Indices
+
 (defn init-connection
   [url login password]
-  (nr/connect! url login password))
-
-;;; ## Indices
-(defonce users-index-impl (nn/create-index "usersIndex"))
-(def users-index (with-meta users-index-impl {:key "e-mail"}))
-(defonce links-index-impl (nn/create-index "linksIndex"))
-(def links-index (with-meta links-index-impl {:key "link"}))
-(defonce tags-index-impl (nrl/create-index "tagsIndex"))
-(def tags-index (with-meta tags-index-impl {:key "tag"}))
-(defonce bookmarks-index-impl (nn/create-index "bookmarksIndex"))
-(def bookmarks-index (with-meta bookmarks-index-impl {:key "bookmark"}))
+  (nr/connect! url login password)
+  (def users-index-impl (nn/create-index "usersIndex"))
+  (def users-index (with-meta users-index-impl {:key "e-mail"}))
+  (def links-index-impl (nn/create-index "linksIndex"))
+  (def links-index (with-meta links-index-impl {:key "link"}))
+  (def tags-index-impl (nrl/create-index "tagsIndex"))
+  (def tags-index (with-meta tags-index-impl {:key "tag"}))
+  (def bookmarks-index-impl (nn/create-index "bookmarksIndex"))
+  (def bookmarks-index (with-meta bookmarks-index-impl {:key "bookmark"})))
 
 (defn- get-from-index
   [index k v]
@@ -136,7 +136,7 @@
      (map #(get % "t.tag")
           (cy/tquery (str "START b=node:" (:name index) "({key}={value}) "
                           "MATCH ()-[t:tagged]->(b) "
-                          "RETURN t.tag")
+                          "RETURN DISTINCT t.tag")
                      {:key (or (:key (meta index)) "bookmark")
                       :value (generate-key e-mail link)}))))
 
@@ -147,7 +147,7 @@
      (map #(get % "t.tag")
           (cy/tquery (str "START u=node:" (:name index) "({key}={value}) "
                           "MATCH u-[t:tagged]->() "
-                          "RETURN t.tag")
+                          "RETURN DISTINCT t.tag")
                      {:key (or (:key (meta index)) "e-mail") :value e-mail}))))
 
 (defn get-tagged-bookmarks-for-user
