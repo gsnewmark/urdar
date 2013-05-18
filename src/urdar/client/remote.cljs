@@ -54,8 +54,9 @@
       (fn [{body :body}]
         (let [bookmarks (r/read-string body)]
           (doseq [b bookmarks]
-            (p/publish-bookmark (p/->BookmarkAddedEvent (:link b) false
-                                               (:tags b))))))
+            (p/publish-bookmark
+             (p/->BookmarkAddedEvent (:link b) false (:tags b)
+                                     (:title b) (:note b))))))
       :on-error
       (fn [_] (ef/log-debug "Error while downloading bookmarks.")))))
 
@@ -85,7 +86,8 @@
    :on-success
    (fn [{bookmark :body}]
      (let [b (r/read-string bookmark)]
-       (p/publish-bookmark (p/->BookmarkAddedEvent (:link b) true []))
+       (p/publish-bookmark
+        (p/->BookmarkAddedEvent (:link b) true (:tags b) (:title b) (:note b)))
        (p/publish-tag-changed (p/->TagChangedEvent nil))))
    :on-error
    (fn [{status :status}]
@@ -131,3 +133,15 @@
    (fn [_] (p/publish-tag-removed (p/->TagRemovedEvent tag node)))
    :on-error
    (fn [_] (ef/log-debug "Error while deleting tag."))))
+
+(defn add-note!
+  "Adds a note to link for current user."
+  [link note]
+  (remote/request
+   [:post "/_/notes"]
+   :headers {"Content-Type" "application/edn;charset=utf-8"}
+   :content (pr-str {:link link :note note})
+   :on-success
+   (fn [_] (ef/log-debug "Note added successfully."))
+   :on-error
+   (fn [{status :status}] (ef/log-debug "Error while updating note."))))

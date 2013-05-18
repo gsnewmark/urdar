@@ -5,7 +5,7 @@
             [shoreleave.pubsubs.protocols :as pubsub]
             [shoreleave.pubsubs.publishable]))
 
-(defrecord BookmarkAddedEvent [link new? tags])
+(defrecord BookmarkAddedEvent [link new? tags title note])
 (defrecord BookmarkRemovedEvent [node update-tag-menu?])
 (defrecord TagMenuChange [tag reset-menu?])
 (defrecord TagAddedEvent [node link tag update-tag-menu?])

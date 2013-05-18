@@ -56,3 +56,9 @@
     (edn-response :status 422)
     (do (db/untag-bookmark e-mail link tag)
         (edn-response :status 204))))
+
+(defn add-note! [e-mail link note]
+  (if-not (and e-mail link note)
+    (edn-response :status 422)
+    (do (db/update-bookmark e-mail link nil note)
+        (edn-response :status 204))))

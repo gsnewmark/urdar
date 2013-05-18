@@ -37,6 +37,12 @@
   [node]
   (string/trim (:tag (ef/from node :tag [".new-tag"] (ef/get-prop :value)))))
 
+(defn read-note
+  "Reads a current value of note for a given bookmark."
+  [node]
+  (string/trim
+   (:note (ef/from node :note ["textarea.note"] (ef/get-prop :value)))))
+
 (defn clear-input-element
   "Clears text input field."
   [selector {:keys [node] :or {node js/document}}]
@@ -107,11 +113,12 @@
 
 (defn bookmark-div
   "Creates a bookmark HTML element."
-  [link tags bookmark-id popup-id]
+  [link tags title note bookmark-id popup-id]
   (template/node
    [:div.bookmark.well.well-small {:id bookmark-id}
-    [:div [:a {:href link :target "_blank"} link]
+    [:div [:a {:href link :target "_blank"} (or title link)]
      [:button.close.btn-danger.delete-bookmark! "Delete"]]
+    [:textarea.note {:placeholder "Here you can place a note"} note]
     [:div.tags [:i.icon-tags] "Tags: "
      [:span.tags-list]
      [:a.add-tag! {:href "#add-tags" :data-toggle "modal"
@@ -141,17 +148,22 @@
       (r/new-tag-validation-failed n))))
 
 ;;; Render a bookmark.
-(defn render-bookmark [{:keys [link new? tags]}]
+(defn render-bookmark [{:keys [link new? tags title note]}]
   (let [id (s/generate-id link)
         popup-id (str "modal-" id)
         bookmark-id (str "bookmark-" id)
-        n (bookmark-div link tags bookmark-id popup-id)]
+        n (bookmark-div link tags title note bookmark-id popup-id)]
     (ef/at js/document
            ["#bookmarks"]
            (let [adder (if new? ef/prepend ef/append)] (adder n))
 
            [(str "#" bookmark-id " .delete-bookmark!")]
            (events/listen :click (fn [event] (r/remove-bookmark! link n)))
+
+           [(str "#" bookmark-id " .note")]
+           (events/listen
+            :change
+            (fn [event] (let [note (read-note n)] (r/add-note! link note))))
 
            [(str "#" popup-id " .new-tag")]
            (ef/do->

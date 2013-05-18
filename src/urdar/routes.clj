@@ -23,4 +23,6 @@
   (DELETE "/bookmarks" [link :as {{e-mail :e-mail} :session}]
           (api/delete-bookmark! e-mail link))
   (DELETE "/tags" [link tag :as {{e-mail :e-mail} :session}]
-          (api/remove-tag! e-mail tag link)))
+          (api/remove-tag! e-mail tag link))
+  (POST "/notes" [link note :as {{e-mail :e-mail} :session}]
+        (api/add-note! e-mail link note)))

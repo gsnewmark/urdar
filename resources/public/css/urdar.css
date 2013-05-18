@@ -6,3 +6,9 @@ body {
     padding-top: 0px;
   }
 }
+.note {
+  width: 100%; max-width: 100%; padding: 10px; border: 3px solid #999;
+  -webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+  -moz-box-sizing: border-box;    /* Firefox, other Gecko */
+  box-sizing: border-box;         /* Opera/IE 8+ */
+}
