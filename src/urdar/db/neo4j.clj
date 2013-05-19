@@ -170,8 +170,9 @@
   ([index e-mail tag [skip quant]]
      ;; TODO remove concatenation?
      (cy/tquery (str "START user=node:" (:name index) "({key}={value}) "
-                     "MATCH (user)-[t:tagged]->(b)-[:bookmarks]->(l) "
-                     "WHERE t.tag={tag} "
+                     "MATCH (user)-[tag:tagged]->(b)-[:bookmarks]->(l), "
+                     "(user)-[t:tagged]->(b) "
+                     "WHERE tag.tag={tag} "
                      "RETURN b.`date-added`, b.title?, b.note?, l.url, "
                      "COLLECT(DISTINCT t.tag?) "
                      "ORDER BY `b.date-added` DESC"

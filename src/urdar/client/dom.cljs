@@ -81,10 +81,10 @@
 
 (defn recommendation-node
   [link]
-  (template/node [:li [:a {:href link} link] " "
+  (template/node [:li [:a {:href link :target "_blank"} link] " "
                   [:a {:href "#add-bookmark"} [:i.icon-bookmark]]]))
 
-(def recommendations-list (template/node [:ul#recommended-links]))
+(defn recommendations-list [] (template/node [:ul#recommended-links]))
 
 (defn add-tag-popup
   [popup-id link]
@@ -227,7 +227,7 @@
 
 (defn render-recommendations-list
   [{:keys [links]}]
-  (let [recs-list recommendations-list]
+  (let [recs-list (recommendations-list)]
     (ef/at js/document
            ["#recs"]
            (ef/content recs-list))
