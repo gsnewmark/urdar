@@ -16,13 +16,15 @@
         :as {{e-mail :e-mail} :session}]
        (api/get-tagged-bookmarks e-mail tag skip-bookmarks bookmarks-to-fetch))
   (GET "/tags" {{e-mail :e-mail} :session} (api/get-tags e-mail))
+  (GET "/recommendations" {{e-mail :e-mail} :session}
+       (api/get-recommendations e-mail))
   (POST "/bookmarks" [link :as {{e-mail :e-mail} :session}]
         (api/add-bookmark! e-mail link))
   (POST "/tags" [link tag :as {{e-mail :e-mail} :session}]
         (api/add-tag! e-mail tag link))
+  (POST "/notes" [link note :as {{e-mail :e-mail} :session}]
+        (api/add-note! e-mail link note))
   (DELETE "/bookmarks" [link :as {{e-mail :e-mail} :session}]
           (api/delete-bookmark! e-mail link))
   (DELETE "/tags" [link tag :as {{e-mail :e-mail} :session}]
-          (api/remove-tag! e-mail tag link))
-  (POST "/notes" [link note :as {{e-mail :e-mail} :session}]
-        (api/add-note! e-mail link note)))
+          (api/remove-tag! e-mail tag link)))

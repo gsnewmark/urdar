@@ -62,3 +62,8 @@
     (edn-response :status 422)
     (do (db/update-bookmark e-mail link nil note)
         (edn-response :status 204))))
+
+(defn get-recommendations [e-mail]
+  (if-not e-mail
+    (edn-response :status 422)
+    (edn-response :body (db/recommend-bookmarks e-mail))))

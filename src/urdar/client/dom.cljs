@@ -5,6 +5,7 @@
             [urdar.client.state :as s]
             [urdar.crossovers.validation :as v]
             [clojure.string :as string]
+            [goog.dom.classes :as classes]
             [dommy.template :as template]
             [enfocus.core :as ef]
             [enfocus.events :as events])
@@ -71,6 +72,19 @@
   [(str "#" tag)] (when tag (ef/add-class "btn-success")))
 
 ;;; ## Templates
+
+(def recommendations-are-loading
+  (template/node
+   [:span
+    [:i.icon-refresh.icon-spin.icon-large]
+    "Please wait while recommendations are prepared..."]))
+
+(defn recommendation-node
+  [link]
+  (template/node [:li [:a {:href link} link] " "
+                  [:a {:href "#add-bookmark"} [:i.icon-bookmark]]]))
+
+(def recommendations-list (template/node [:ul#recommended-links]))
 
 (defn add-tag-popup
   [popup-id link]
@@ -195,6 +209,30 @@
             :click
             (fn [event] (p/publish-tag-changed (p/->TagChangedEvent tag)))))))
 
+(em/defaction render-recommendations-are-loading []
+  ["#recs"]
+  (ef/content recommendations-are-loading))
+
+;;; TODO update list when it's exhausted
+(defn render-recommendation
+  [node link]
+  (let [link-node (recommendation-node link)]
+    (ef/at node (ef/append link-node))
+    (ef/at link-node
+           (events/listen
+            :click
+            (fn [event]
+              (r/add-bookmark! link)
+              (remove-node {:node link-node}) )))))
+
+(defn render-recommendations-list
+  [{:keys [links]}]
+  (let [recs-list recommendations-list]
+    (ef/at js/document
+           ["#recs"]
+           (ef/content recs-list))
+    (doseq [link links] (render-recommendation recs-list link))))
+
 ;;; ## Event handlers
 
 (defn- add-new-link-clicked
@@ -209,10 +247,17 @@
       (r/new-link-validation-failed "Incorrect URL."))))
 
 ;;; Publishes a newly added link when users clicks on the button.
-(em/defaction add-new-link-handlers []
+(em/defaction add-handlers []
   ["#link-to-add"]
   (generate-enter-up-listener add-new-link-clicked)
   ["#add-bookmark!"]
   (events/listen
    :click
-   add-new-link-clicked))
+   add-new-link-clicked)
+  ["#recs-toggle"]
+  (events/listen
+   :click
+   (fn [e]
+     (when (classes/has (.-currentTarget e) "collapsed")
+       (do (render-recommendations-are-loading)
+           (r/get-recommendations))))))

@@ -11,6 +11,7 @@
 (defrecord TagAddedEvent [node link tag update-tag-menu?])
 (defrecord TagRemovedEvent [tag node])
 (defrecord TagChangedEvent [tag])
+(defrecord RecommendationsReceived [links])
 
 (def ^{:private true} bus (pbus/bus))
 
@@ -43,3 +44,9 @@
 (def publish-tag-changed (partial pubsub/publish bus tag-changed-topic))
 (def subscribe-to-tag-changed
   (partial pubsub/subscribe bus tag-changed-topic))
+
+(def recommendations-received-topic (pubsub/topicify :recs-received))
+(def publish-recomendations-received
+  (partial pubsub/publish bus recommendations-received-topic))
+(def subscribe-to-recommendations-received
+  (partial pubsub/subscribe bus recommendations-received-topic))

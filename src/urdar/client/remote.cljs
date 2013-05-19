@@ -145,3 +145,17 @@
    (fn [_] (ef/log-debug "Note added successfully."))
    :on-error
    (fn [{status :status}] (ef/log-debug "Error while updating note."))))
+
+(defn get-recommendations
+  "Retrieves links recommended for current user."
+  []
+  (remote/request
+   [:get "/_/recommendations"]
+   :headers {"Content-Type" "application/edn;charset=utf-8"}
+   :on-success
+   (fn [{recommendations-str :body}]
+     (let [recommendations (r/read-string recommendations-str)]
+       (p/publish-recomendations-received
+        (p/->RecommendationsReceived recommendations))))
+   :on-error
+   (fn [_] (ef/log-debug "Error while downloading recommendations."))))
