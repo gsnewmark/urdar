@@ -237,7 +237,7 @@
              "user=node:" (:name u-index) "({key}={value}) "
              "WITH link AS l, user AS u "
              "SKIP " to-skip  " LIMIT " random-links-limit
-             "WHERE NOT((u)-[:has]->()-[:bookmarks]->(l)) "
+             " WHERE NOT((u)-[:has]->()-[:bookmarks]->(l)) "
              "RETURN l.url "
              "LIMIT " n))
       {:key (or (:key (meta u-index)) "e-mail") :value e-mail})))
