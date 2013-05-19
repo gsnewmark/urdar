@@ -1,9 +1,11 @@
 (ns urdar.db
   (:require [urdar.db.neo4j :as n4j]
-            [urdar.config :as c]))
+            [urdar.config :as c]
+            [clojure.set :as set]))
 
 (defrecord User [e-mail date-signed])
 (defrecord Bookmark [link title note tags date-added])
+(defrecord Link [url])
 
 (defprotocol UserOperations
   "DB operations that could be performed during ordinary user's usage of
@@ -48,7 +50,11 @@
     "Retrieves all or quant number of bookmarks (instances of Bookmark) with
     given tag of given user sorted by their creation date (descending),
     optionally skipping first skip bookmarks.")
-  (get-tags-i [self e-mail] "Returns a set of all tags of given user."))
+  (get-tags-i [self e-mail] "Returns a set of all tags of given user.")
+  (recommend-bookmarks-i [self randomness-factor n e-mail]
+    "Returns top n link recommendations for user (list of instances of
+    Link). Randomness factor is float [0,1] that specifies what percent of
+    results are random links."))
 
 ;;; TODO maybe use constructor from map
 (defn- node->User
@@ -120,7 +126,37 @@
   (get-tagged-bookmarks-i [_ e-mail tag skip quant]
     (map cypher-bookmark-result->Bookmark
          (n4j/get-tagged-bookmarks-for-user e-mail tag [skip quant])))
-  (get-tags-i [_ e-mail] (n4j/get-tags-for-user e-mail)))
+  (get-tags-i [_ e-mail] (n4j/get-tags-for-user e-mail))
+  (recommend-bookmarks-i [_ randomness-factor n e-mail]
+    (let [random-bookmarks
+          (into #{} (map #(get % "l.url")
+                         (n4j/random-bookmarks-for-user n e-mail)))
+
+          recommended-bookmarks
+          (into #{} (map #(get % "url")
+                         (n4j/recommended-bookmarks-for-user n e-mail)))
+
+          number-of-recommended (count recommended-bookmarks)
+          number-of-recommended-to-show (int (* n (- 1.0 randomness-factor)))
+
+          number-of-recommended-to-show
+          (if (> number-of-recommended-to-show number-of-recommended)
+            number-of-recommended
+            number-of-recommended-to-show)
+
+          number-of-random-to-show (- n number-of-recommended-to-show)
+
+          random-nonrecommended-bookmarks
+          (set/difference random-bookmarks recommended-bookmarks)
+
+          recommendations
+          (shuffle
+           (concat
+            (take number-of-recommended-to-show
+                  (shuffle recommended-bookmarks))
+            (take number-of-random-to-show
+                  (shuffle random-nonrecommended-bookmarks))))]
+      recommendations)))
 
 (def u
   (let [{:keys [url login password]} (:neo4j c/config)]
@@ -142,3 +178,4 @@
 (def tag-bookmark (partial tag-bookmark-i u))
 (def untag-bookmark (partial untag-bookmark-i u))
 (def bookmark-tagged? (partial bookmark-tagged-i? u))
+(def recommend-bookmarks (partial recommend-bookmarks-i u 0.3 10))

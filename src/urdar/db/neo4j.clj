@@ -20,6 +20,15 @@
   (def bookmarks-index-impl (nn/create-index "bookmarksIndex"))
   (def bookmarks-index (with-meta bookmarks-index-impl {:key "bookmark"})))
 
+(defn- number-of-entries-in-index
+  ([index] (number-of-entries-in-index index ""))
+  ([index default-key]
+     (let [key (or (:key (meta index)) default-key)]
+       (get (first (cy/tquery (str "START n=node:" (:name index)
+                                   "(\"" key ":*\") "
+                                   "RETURN COUNT(n)")))
+            "COUNT(n)"))))
+
 (defn- get-from-index
   [index k v]
   (let [key (or (:key (meta index)) k)]
@@ -171,8 +180,6 @@
                 {:key (or (:key (meta index)) "e-mail") :value e-mail
                  :tag tag})))
 
-;;; ## Entity deletion
-
 (defn get-bookmarks-for-user
   "Retrieves link, title, note, tags and date added for quant bookmarks
   (ordered by date added descending - newest first) of user starting from
@@ -191,6 +198,49 @@
                      (when (and skip quant)
                        (str " SKIP " skip " LIMIT " quant)))
                 {:key (or (:key (meta index)) "e-mail") :value e-mail})))
+
+(defn recommended-bookmarks-for-user
+  "Finds n (or lesser) links that user hasn't yet bookmarked, but might be
+  interested in."
+  ([e-mail] (recommend-bookmarks-for-user 10 e-mail))
+  ([n e-mail] (recommend-bookmarks-for-user users-index n e-mail))
+  ([index n e-mail]
+     (cy/tquery (str "START user=node:" (:name index) "({key}={value}) "
+                     "MATCH (user)-[:has]->()-[:bookmarks]->(shared_link)"
+                     "<-[:bookmarks]-()<-[:has]-(other)-[:has]->()"
+                     "-[:bookmarks]->(other_link) "
+                     "WHERE NOT(user-[:has]->()-[:bookmarks]->(other_link)) "
+                     "WITH other.`e-mail` AS mail, "
+                     "COUNT(shared_link) AS slc, other_link.url AS url "
+                     "ORDER BY slc DESC "
+                     "RETURN url, COUNT(url) as cnt "
+                     "ORDER BY cnt DESC"
+                     (when n (str " LIMIT " n)))
+                {:key (or (:key (meta index)) "e-mail") :value e-mail})))
+
+(defn random-bookmarks-for-user
+  "Finds n (or lesser) random links that user hasn't yet bookmarked."
+  ([e-mail] (random-bookmarks-for-user 10 e-mail))
+  ([n e-mail] (random-bookmarks-for-user users-index n e-mail))
+  ([u-index n e-mail]
+     (random-bookmarks-for-user links-index u-index n e-mail))
+  ([l-index u-index n e-mail]
+     (cy/tquery
+      (let [lkey (or (:key (meta l-index)) "link") lvalue "*"
+            links-count (number-of-entries-in-index l-index lkey)
+            random-links-limit (* n 2)
+            to-skip (if (> links-count random-links-limit)
+                      (rand-int (- links-count random-links-limit))
+                      0)]
+        (str "START "
+             "link=node:" (:name l-index) "(\"" lkey ":" lvalue "\"), "
+             "user=node:" (:name u-index) "({key}={value}) "
+             "WITH link AS l, user AS u "
+             "SKIP " to-skip  " LIMIT " random-links-limit
+             "WHERE NOT((u)-[:has]->()-[:bookmarks]->(l)) "
+             "RETURN l.url "
+             "LIMIT " n))
+      {:key (or (:key (meta u-index)) "e-mail") :value e-mail})))
 
 ;;; ## Entity deletion
 
