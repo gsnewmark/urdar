@@ -235,6 +235,7 @@
         (str "START "
              "link=node:" (:name l-index) "(\"" lkey ":" lvalue "\"), "
              "user=node:" (:name u-index) "({key}={value}) "
+             "MATCH ()-[:bookmarks]->(link) "
              "WITH link AS l, user AS u "
              "SKIP " to-skip  " LIMIT " random-links-limit
              " WHERE NOT((u)-[:has]->()-[:bookmarks]->(l)) "

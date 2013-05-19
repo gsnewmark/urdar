@@ -278,7 +278,7 @@
     (is (every? #((into #{} (:tags %)) tag) r))
     (is (every? #(not (nil? (:date-added %))) r))))
 
-(deftest recommandations-test
+(deftest recommendations-test
   (let [n 8
         randomness-factor 0.25
         e-mail1 "oz@example.com"
