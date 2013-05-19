@@ -236,47 +236,47 @@
      (db/delete-bookmark e-mail link2)
      (is (= #{} (into #{} (db/get-tags e-mail))))))
 
-(deftest all-tagged-bookmarks-retrieval
-  (let [e-mail "connel@example.com"
-        link1 "http://connel.page1.example.com"
-        link2 "http://connel.page2.example.com"
-        link3 "http://connel.page3.example.com"
-        tag "connel.tag"
-        _ (db/register-user e-mail)
-        _ (db/add-bookmark e-mail link1)
-        _ (db/add-bookmark e-mail link2)
-        _ (db/add-bookmark e-mail link3)
-        _ (db/tag-bookmark e-mail link1 tag)
-        _ (db/tag-bookmark e-mail link2 tag)
-        _ (db/tag-bookmark e-mail link3 tag)
-        r (db/get-tagged-bookmarks e-mail tag)]
-    (is (every? #(= urdar.db.Bookmark (class %)) r))
-    (is (= #{link1 link2 link3} (into #{} (map :link r))))
-    (is (every? #(db/bookmark-tagged? e-mail (:link %) tag) r))
-    (is (every? #((into #{} (:tags %)) tag) r))
-    (is (every? #(not (nil? (:date-added %))) r))))
+(comment (deftest all-tagged-bookmarks-retrieval
+   (let [e-mail "connel@example.com"
+         link1 "http://connel.page1.example.com"
+         link2 "http://connel.page2.example.com"
+         link3 "http://connel.page3.example.com"
+         tag "connel.tag"
+         _ (db/register-user e-mail)
+         _ (db/add-bookmark e-mail link1)
+         _ (db/add-bookmark e-mail link2)
+         _ (db/add-bookmark e-mail link3)
+         _ (db/tag-bookmark e-mail link1 tag)
+         _ (db/tag-bookmark e-mail link2 tag)
+         _ (db/tag-bookmark e-mail link3 tag)
+         r (db/get-tagged-bookmarks e-mail tag)]
+     (is (every? #(= urdar.db.Bookmark (class %)) r))
+     (is (= #{link1 link2 link3} (into #{} (map :link r))))
+     (is (every? #(db/bookmark-tagged? e-mail (:link %) tag) r))
+     (is (every? #((into #{} (:tags %)) tag) r))
+     (is (every? #(not (nil? (:date-added %))) r)))))
 
-(deftest some-tagged-bookmarks-retrieval
-  (let [e-mail "cyrus@example.com"
-        link1 "http://cyrus.page1.example.com"
-        link2 "http://cyrus.page2.example.com"
-        link3 "http://cyrus.page3.example.com"
-        tag "cyrus.tag"
-        _ (db/register-user e-mail)
-        _ (db/add-bookmark e-mail link1)
-        _ (Thread/sleep 1000)
-        _ (db/add-bookmark e-mail link2)
-        _ (Thread/sleep 1000)
-        _ (db/add-bookmark e-mail link3)
-        _ (db/tag-bookmark e-mail link1 tag)
-        _ (db/tag-bookmark e-mail link2 tag)
-        _ (db/tag-bookmark e-mail link3 tag)
-        r (db/get-tagged-bookmarks e-mail tag 1 2)]
-    (is (every? #(= urdar.db.Bookmark (class %)) r))
-    (is (= #{link1 link2} (into #{} (map :link r))))
-    (is (every? #(db/bookmark-tagged? e-mail (:link %) tag) r))
-    (is (every? #((into #{} (:tags %)) tag) r))
-    (is (every? #(not (nil? (:date-added %))) r))))
+(comment (deftest some-tagged-bookmarks-retrieval
+   (let [e-mail "cyrus@example.com"
+         link1 "http://cyrus.page1.example.com"
+         link2 "http://cyrus.page2.example.com"
+         link3 "http://cyrus.page3.example.com"
+         tag "cyrus.tag"
+         _ (db/register-user e-mail)
+         _ (db/add-bookmark e-mail link1)
+         _ (Thread/sleep 1000)
+         _ (db/add-bookmark e-mail link2)
+         _ (Thread/sleep 1000)
+         _ (db/add-bookmark e-mail link3)
+         _ (db/tag-bookmark e-mail link1 tag)
+         _ (db/tag-bookmark e-mail link2 tag)
+         _ (db/tag-bookmark e-mail link3 tag)
+         r (db/get-tagged-bookmarks e-mail tag 1 2)]
+     (is (every? #(= urdar.db.Bookmark (class %)) r))
+     (is (= #{link1 link2} (into #{} (map :link r))))
+     (is (every? #(db/bookmark-tagged? e-mail (:link %) tag) r))
+     (is (every? #((into #{} (:tags %)) tag) r))
+     (is (every? #(not (nil? (:date-added %))) r)))))
 
 (comment (deftest recommendations-test
    (let [n 8
