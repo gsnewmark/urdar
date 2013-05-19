@@ -202,8 +202,8 @@
 (defn recommended-bookmarks-for-user
   "Finds n (or lesser) links that user hasn't yet bookmarked, but might be
   interested in."
-  ([e-mail] (recommend-bookmarks-for-user 10 e-mail))
-  ([n e-mail] (recommend-bookmarks-for-user users-index n e-mail))
+  ([e-mail] (recommended-bookmarks-for-user 10 e-mail))
+  ([n e-mail] (recommended-bookmarks-for-user users-index n e-mail))
   ([index n e-mail]
      (cy/tquery (str "START user=node:" (:name index) "({key}={value}) "
                      "MATCH (user)-[:has]->()-[:bookmarks]->(shared_link)"

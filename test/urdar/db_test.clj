@@ -277,3 +277,59 @@
     (is (every? #(db/bookmark-tagged? e-mail (:link %) tag) r))
     (is (every? #((into #{} (:tags %)) tag) r))
     (is (every? #(not (nil? (:date-added %))) r))))
+
+(deftest recommandations-test
+  (let [n 8
+        randomness-factor 0.25
+        e-mail1 "oz@example.com"
+        e-mail2 "el@example.com"
+        e-mail3 "to@example.com"
+        link1 "http://oz.page1.example.com"
+        link2 "http://oz.page2.example.com"
+        link3 "http://oz.page3.example.com"
+        link4 "http://el.page1.example.com"
+        link5 "http://el.page2.example.com"
+        link6 "http://el.page3.example.com"
+        link7 "http://to.page1.example.com"
+        link8 "http://to.page2.example.com"
+        link9 "http://to.page3.example.com"
+        link10 "http://oz.el.page1.example.com"
+        link11 "http://oz.el.page2.example.com"
+        link12 "http://el.to.page1.example.com"
+        link13 "http://el.to.page2.example.com"
+        link14 "http://el.to.page3.example.com"
+        _ (db/register-user e-mail1)
+        _ (db/register-user e-mail2)
+        _ (db/register-user e-mail3)
+        _ (db/add-bookmark e-mail1 link1)
+        _ (db/add-bookmark e-mail1 link2)
+        _ (db/add-bookmark e-mail1 link3)
+        _ (db/add-bookmark e-mail2 link4)
+        _ (db/add-bookmark e-mail2 link5)
+        _ (db/add-bookmark e-mail2 link6)
+        _ (db/add-bookmark e-mail3 link7)
+        _ (db/add-bookmark e-mail3 link8)
+        _ (db/add-bookmark e-mail3 link9)
+        _ (db/add-bookmark e-mail1 link10)
+        _ (db/add-bookmark e-mail1 link11)
+        _ (db/add-bookmark e-mail2 link10)
+        _ (db/add-bookmark e-mail2 link11)
+        _ (db/add-bookmark e-mail2 link12)
+        _ (db/add-bookmark e-mail2 link13)
+        _ (db/add-bookmark e-mail2 link14)
+        _ (db/add-bookmark e-mail3 link12)
+        _ (db/add-bookmark e-mail3 link13)
+        _ (db/add-bookmark e-mail3 link14)
+        _ (Thread/sleep 500)
+        r1 (db/recommend-bookmarks-i db/u randomness-factor n e-mail1)
+        r2 (db/recommend-bookmarks-i db/u randomness-factor n e-mail2)
+        r3 (db/recommend-bookmarks-i db/u randomness-factor n e-mail3)]
+    (is (= n (count r1)))
+    (is (= n (count r2)))
+    (is (= n (count r3)))
+    (is (every? (complement (partial db/bookmark-exists? e-mail1)) r1))
+    (is (every? (complement (partial db/bookmark-exists? e-mail2)) r2))
+    (is (every? (complement (partial db/bookmark-exists? e-mail3)) r3))
+    (is (every? (into #{} r1) [link4 link5 link6 link12 link13 link14]))
+    (is (every? (into #{} r3) [link4 link5 link6 link10 link11]))
+    (is (every? (into #{} r2) [link1 link2 link3 link7 link8 link9]))))
