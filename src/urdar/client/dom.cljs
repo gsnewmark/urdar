@@ -1,8 +1,8 @@
 (ns urdar.client.dom
   "Various functions that deal with representation of page."
-  (:require [urdar.client.pubsub :as p]
-            [urdar.client.remote :as r]
-            [urdar.client.state :as s]
+  (:require [urdar.client.remote :as r]
+            [urdar.client.signal :as s]
+            [urdar.client.state :as st]
             [urdar.crossovers.validation :as v]
             [clojure.string :as string]
             [goog.dom.classes :as classes]
@@ -46,28 +46,30 @@
 
 (defn clear-input-element
   "Clears text input field."
-  [selector {:keys [node] :or {node js/document}}]
-  (ef/at node [selector] (ef/set-prop :value "")))
+  ([selector]
+     (clear-input-element selector js/document))
+  ([selector node]
+     (ef/at node [selector] (ef/set-prop :value ""))))
 
 (em/defaction remove-all-bookmarks []
   [".bookmark"] (ef/remove-node))
 
 ;;; TODO remove handler when deleting
-(defn remove-node [{:keys [node]}] (ef/at node (ef/remove-node)))
+(defn remove-node [node] (ef/at node (ef/remove-node)))
 
-(defn remove-tag-node [{:keys [node tag] :as e}]
-  (if (s/tag-selected? tag)
-    (p/publish-bookmark-removed
-     (p/->BookmarkRemovedEvent (get-parent (get-grandparent node)) false))
-    (remove-node e)))
+(defn remove-tag-node [node tag]
+  (if (st/tag-selected? tag)
+    (s/signal
+     (s/->BookmarkRemovedSignal (get-parent (get-grandparent node)) false))
+    (remove-node node)))
 
-(defn clean-tags-menu [{:keys [reset-menu?]}]
+(defn clean-tags-menu [reset-menu?]
   (when reset-menu?
     (ef/at js/document
            ["#tags"]
            (ef/content ""))))
 
-(em/defaction tag-filter-selected [{:keys [tag]}]
+(em/defaction tag-filter-selected [tag]
   [".tag-filter"] (ef/remove-class "btn-success")
   [(str "#" tag)] (when tag (ef/add-class "btn-success")))
 
@@ -140,9 +142,34 @@
       [:i.icon-plus]]
      (add-tag-popup popup-id link)]]))
 
-;;; ## Rendering (subscribers for pubsub)
+;;; ## Rendering
 
-(defn render-tag [{:keys [node link tag]}]
+(em/defaction new-link-validation-succeeded []
+  ["#add-bookmark-error"] (ef/add-class "hidden")
+  ["#add-bookmark"] (ef/remove-class "error"))
+
+(em/defaction new-link-validation-failed [error-msg]
+  ["#add-bookmark"] (ef/add-class "error")
+  ["#add-bookmark-error"] (ef/do-> (ef/content error-msg)
+                                   (ef/remove-class "hidden")))
+
+(defn new-tag-validation-succeeded [node]
+  (ef/at node
+   [".new-tag-cg"] (ef/remove-class "error")
+   [".new-tag-error"] (ef/add-class "hidden")))
+
+(defn new-tag-validation-failed
+  [node error-msg]
+  (let [error-msg (if (nil? error-msg)
+                    (str "Tag should contain no more than 50 alphanumeric "
+                         "characters, dashes  or underscores.")
+                    error-msg)]
+    (ef/at node
+           [".new-tag-cg"] (ef/add-class "error")
+           [".new-tag-error"] (ef/do-> (ef/content error-msg)
+                                       (ef/remove-class "hidden")))))
+
+(defn render-tag [node link tag]
   (let [tag-node (tag-element tag)]
     (ef/at node [".tags-list"] (ef/prepend tag-node))
     (ef/at tag-node
@@ -152,18 +179,18 @@
            [".set-tag!"]
            (events/listen
             :click
-            (fn [event] (p/publish-tag-changed (p/->TagChangedEvent tag)))))))
+            (fn [event] (s/signal (s/->TagFilterChangedSignal tag)))))))
 
 (defn- add-tag-clicked
   [link n event]
   (let [tag (read-tag-to-add n)]
     (if (v/valid-tag? tag)
       (r/add-tag! tag link n)
-      (r/new-tag-validation-failed n))))
+      (s/signal (s/->NewTagValidationFailed n nil)))))
 
 ;;; Render a bookmark.
-(defn render-bookmark [{:keys [link new? tags title note]}]
-  (let [id (s/generate-id link)
+(defn render-bookmark [link new? tags title note]
+  (let [id (st/generate-id link)
         popup-id (str "modal-" id)
         bookmark-id (str "bookmark-" id)
         n (bookmark-div link tags title note bookmark-id popup-id)]
@@ -187,18 +214,18 @@
              (fn [event]
                (let [tag (read-tag-to-add n)]
                  (if (or (empty? tag) (v/valid-tag? tag))
-                   (r/new-tag-validation-succeeded {:node n})
-                   (r/new-tag-validation-failed n))))))
+                   (new-tag-validation-succeeded n)
+                   (s/signal (s/->NewTagValidationFailed n nil)))))))
 
            [(str "#" popup-id " .btn")]
            (events/listen
             :click
             (partial add-tag-clicked link n)))
     (when (not (empty? tags))
-      (doall (map #(p/publish-tag (p/->TagAddedEvent n link % false)) tags)))))
+      (doall (map #(s/signal (s/->RenderTagSignal n link %)) tags)))))
 
-(defn render-tag-menu-element [{:keys [tag reset-menu?]}]
-  (let [selected? (and tag (s/tag-selected? tag))
+(defn render-tag-menu-element [tag]
+  (let [selected? (and tag (st/tag-selected? tag))
         tag-node (tag-link tag true selected?)]
     (ef/at js/document
            ["#tags"]
@@ -207,7 +234,7 @@
            [".set-tag!"]
            (events/listen
             :click
-            (fn [event] (p/publish-tag-changed (p/->TagChangedEvent tag)))))))
+            (fn [event] (s/signal (s/->TagFilterChangedSignal tag)))))))
 
 (em/defaction render-recommendations-are-loading []
   ["#recs"]
@@ -226,7 +253,7 @@
               (remove-node {:node link-node}) )))))
 
 (defn render-recommendations-list
-  [{:keys [links]}]
+  [links]
   (let [recs-list (recommendations-list)]
     (ef/at js/document
            ["#recs"]
@@ -244,9 +271,8 @@
                link)]
     (if (v/valid-url? link)
       (r/add-bookmark! link)
-      (r/new-link-validation-failed "Incorrect URL."))))
+      (s/signal (s/->NewLinkValidationFailed "Incorrect URL.")))))
 
-;;; Publishes a newly added link when users clicks on the button.
 (em/defaction add-handlers []
   ["#link-to-add"]
   (generate-enter-up-listener add-new-link-clicked)

@@ -2,15 +2,10 @@
   "Entry point of client-side code."
   (:require [urdar.client.dom :as d]
             [urdar.client.endless-scroll :as es]
-            [urdar.client.pubsub :as p]
             [urdar.client.remote :as r]
             [urdar.client.state :as s]
+            [urdar.client.reactions :as reactions]
             [shoreleave.brepl :as brepl]))
-
-;;; TODO should publish event about bookmark removal, not delete them directly
-(defn refetch-bookmarks [_]
-  (d/remove-all-bookmarks)
-  (r/fetch-bookmarks))
 
 (defn items-to-fetch []
   (-> (es/document-height)
@@ -27,29 +22,9 @@
   []
   (s/reset-id)
   (s/set-bookmarks-to-fetch (items-to-fetch))
-  (p/subscribe-to-bookmarks s/bookmark-fetched!)
-  (p/subscribe-to-bookmarks r/new-link-validation-succeeded)
-  (p/subscribe-to-bookmarks d/render-bookmark)
-  (p/subscribe-to-bookmarks (partial d/clear-input-element "#link-to-add"))
-  (p/subscribe-to-bookmarks-removed d/remove-node)
-  (p/subscribe-to-bookmarks-removed s/bookmark-removed!)
-  (p/subscribe-to-bookmarks-removed r/fetch-tags)
-  (p/subscribe-to-bookmarks-removed s/unset-tag!)
-  (p/subscribe-to-tags-menu-changes d/clean-tags-menu)
-  (p/subscribe-to-tags-menu-changes d/render-tag-menu-element)
-  (p/subscribe-to-tags d/render-tag)
-  (p/subscribe-to-tags r/fetch-tags)
-  (p/subscribe-to-tags r/new-tag-validation-succeeded)
-  (p/subscribe-to-tags (partial d/clear-input-element ".new-tag"))
-  (p/subscribe-to-tags-removed d/remove-tag-node)
-  (p/subscribe-to-tags-removed r/fetch-tags)
-  (p/subscribe-to-tags-removed s/unset-tag!)
-  (p/subscribe-to-tag-changed s/set-tag!)
-  (p/subscribe-to-tag-changed refetch-bookmarks)
-  (p/subscribe-to-tag-changed d/tag-filter-selected)
-  (p/subscribe-to-recommendations-received d/render-recommendations-list)
+  (reactions/activate-reactions)
   (d/add-handlers)
-  (r/fetch-tags {:update-tag-menu? true})
+  (r/fetch-tags true)
   (r/fetch-bookmarks)
   (set! (.-onscroll js/window) (es/generate-on-scroll r/fetch-bookmarks))
   (set! (.-onresize js/window) #(s/set-bookmarks-to-fetch (items-to-fetch)))
