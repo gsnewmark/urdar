@@ -127,6 +127,20 @@
      [:a.remove-tag! {:href "#delete-tag"} [:i.icon-remove]]]
     " "]))
 
+(defn note-template
+  [note]
+  (template/node [:span
+                  [:button.edit-note! {:href "#edit-note"}
+                   [:i.icon-edit] "Edit note"]
+                  [:div.note note]]))
+
+(defn edit-note-template
+  [note]
+  (template/node
+   [:span
+    [:button.save-note! [:i.icon-save] "Save changes"]
+    [:textarea.note {:placeholder "Your notes goes here"} note]]))
+
 (defn bookmark-div
   "Creates a bookmark HTML element."
   [link tags title note bookmark-id popup-id]
@@ -134,7 +148,7 @@
    [:div.bookmark.well.well-small {:id bookmark-id}
     [:div [:a {:href link :target "_blank"} (or title link)]
      [:button.close.btn-danger.delete-bookmark! "Delete"]]
-    [:textarea.note {:placeholder "Here you can place a note"} note]
+    [:div [:span.note-holder]]
     [:div.tags [:i.icon-tags] "Tags: "
      [:span.tags-list]
      [:a.add-tag! {:href "#add-tags" :data-toggle "modal"
@@ -188,6 +202,28 @@
       (r/add-tag! tag link n)
       (s/signal (s/->NewTagValidationFailed n nil)))))
 
+(defn render-note
+  [node edit? link note]
+  (let [n (if edit? (edit-note-template note) (note-template note))]
+    (ef/at node
+           [".note-holder"]
+           (ef/content n))
+    (if edit?
+      (ef/at n
+             [".save-note!"]
+             (events/listen
+              :click
+              (fn [_]
+                (s/signal
+                 (s/->NoteChangeSignal node false true link (read-note n))))))
+      (ef/at n
+             [".edit-note!"]
+             (events/listen
+              :click
+              (fn [_]
+                (s/signal
+                 (s/->NoteChangeSignal node true false link note))))))))
+
 ;;; Render a bookmark.
 (defn render-bookmark [link new? tags title note]
   (let [id (st/generate-id link)
@@ -200,11 +236,6 @@
 
            [(str "#" bookmark-id " .delete-bookmark!")]
            (events/listen :click (fn [event] (r/remove-bookmark! link n)))
-
-           [(str "#" bookmark-id " .note")]
-           (events/listen
-            :change
-            (fn [event] (let [note (read-note n)] (r/add-note! link note))))
 
            [(str "#" popup-id " .new-tag")]
            (ef/do->
@@ -221,6 +252,7 @@
            (events/listen
             :click
             (partial add-tag-clicked link n)))
+    (s/signal (s/->NoteChangeSignal n false false link note))
     (when (not (empty? tags))
       (doall (map #(s/signal (s/->RenderTagSignal n link %)) tags)))))
 

@@ -70,4 +70,9 @@
     s/NewTagValidationFailed
     (react [signal]
       (let [{:keys [node msg]} signal]
-        (d/new-tag-validation-failed node msg)))))
+        (d/new-tag-validation-failed node msg)))
+    s/NoteChangeSignal
+    (react [signal]
+      (let [{:keys [node to-edit? save? link note]} signal]
+        (when save? (r/add-note! link note))
+        (d/render-note node to-edit? link note)))))

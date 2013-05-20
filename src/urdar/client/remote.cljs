@@ -3,6 +3,7 @@
   (:require [urdar.client.state :as st]
             [urdar.client.signal :as s]
             [cljs.reader :as r]
+            [enfocus.core :as ef]
             [shoreleave.remotes.request :as remote])
   (:require-macros [enfocus.macros :as em]))
 
