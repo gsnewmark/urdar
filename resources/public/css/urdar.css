@@ -12,3 +12,4 @@ textarea.note {
   -moz-box-sizing: border-box;    /* Firefox, other Gecko */
   box-sizing: border-box;         /* Opera/IE 8+ */
 }
+.nav-list .btn {width: 100%; display: inline-block; word-wrap: break-word;}

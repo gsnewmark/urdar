@@ -27,7 +27,6 @@
     s/TagRemovedSignal
     (react [signal]
       (let [{:keys [tag node]} signal]
-        (ef/log-debug tag)
         (d/remove-tag-node node tag)
         (r/fetch-tags true)
         (st/unset-tag! tag)))

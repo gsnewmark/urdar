@@ -51,43 +51,39 @@
       <!--/.navbar-inner -->
     </div>
     <!--/.navbar -->
-    <div class="container">
+    <div class="container-fluid">
       <div class="row-fluid">
-        <div class="content span8 offset2">
-          <div class="accordion" id="tags-accordion">
-            <div class="accordion-group">
-              <div class="accordion-heading">
-                <strong><a class="accordion-toggle" data-toggle="collapse" data-parent="#tags-accordion" href="#tags-accordion-body">
-                  Tags
-                </a></strong>
-              </div>
-              <div id="tags-accordion-body" class="accordion-body collapse">
-                <div id="tags" class="accordion-inner"></div>
-              </div>
-            </div>
-          </div>
+        <div class="span2 tags-sidebar">
+          <ul id="tags" class="nav nav-list">
+          </ul>
         </div>
-      </div>
-      <div class="container">
-        <div class="row-fluid">
-          <div class="content span10 offset1">
-            <div class="accordion" id="recs-accordion">
-              <div class="accordion-group">
-                <div class="accordion-heading">
-                  <strong><a id="recs-toggle" class="accordion-toggle collapsed" data-toggle="collapse" data-parent="#recs-accordion" href="#recs-accordion-body">
-                      Recommendations
-                  </a></strong>
-                </div>
-                <div id="recs-accordion-body" class="accordion-body collapse">
-                  <div id="recs" class="accordion-inner">
+        <div class="span10">
+          <div class="row-fluid">
+            <div class="content span11">
+              <div class="accordion" id="recs-accordion">
+                <div class="accordion-group">
+                  <div class="accordion-heading">
+                    <strong>
+                      <a id="recs-toggle" class="accordion-toggle collapsed"
+                         data-toggle="collapse" data-parent="#recs-accordion"
+                         href="#recs-accordion-body">
+                        Recommendations
+                      </a>
+                    </strong>
+                  </div>
+                  <div id="recs-accordion-body"
+                       class="accordion-body collapse">
+                    <div id="recs" class="accordion-inner">
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+          <div class="row">
+            <div id="bookmarks"/></div>
+          </div>
       </div>
-      <div id="bookmarks"/></div>
     </div>
   </body>
 </html>

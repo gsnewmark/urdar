@@ -71,7 +71,7 @@
 
 (em/defaction tag-filter-selected [tag]
   [".tag-filter"] (ef/remove-class "btn-success")
-  [(str "#" tag)] (when tag (ef/add-class "btn-success")))
+  [(str "#" (or tag "#all+bookmarks"))] (ef/add-class "btn-success"))
 
 ;;; ## Templates
 
@@ -107,16 +107,17 @@
 (defn tag-link
   ([tag] (tag-link tag false false))
   ([tag button? selected?]
-     (let [[tag-link tag-text btn-s]
+     (let [[tag-url tag-text]
            (if tag
-             [(str "#" tag) tag ".btn-primary"]
-             ["#" "Remove tag filtering" ".btn-danger"])
+             [(str "#" tag) tag]
+             ["#all+bookmarks" "All bookmarks"])
            span (keyword
                  (str "span.tag-filter"
-                      (when button? (str ".btn" btn-s tag-link
+                      (when button? (str ".btn.input-block-level" tag-url
                                          (when selected? ".btn-success")))))]
        (template/node
-        [:span [:a.set-tag! {:href tag-link} [span tag-text]]]))))
+        [(if button? :li :span)
+         [:a.set-tag! {:href tag-url} [span tag-text]]]))))
 
 (defn tag-element
   "Creates a HTML element for tag."
@@ -150,10 +151,11 @@
      [:button.close.btn-danger.delete-bookmark! "Delete"]]
     [:div [:span.note-holder]]
     [:div.tags [:i.icon-tags] "Tags: "
-     [:span.tags-list]
      [:a.add-tag! {:href "#add-tags" :data-toggle "modal"
                    :data-target (str "#" popup-id)}
       [:i.icon-plus]]
+     " "
+     [:span.tags-list]
      (add-tag-popup popup-id link)]]))
 
 ;;; ## Rendering
