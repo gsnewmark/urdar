@@ -115,8 +115,9 @@
     (not (nil? (n4j/get-tag-rel e-mail link tag))))
   (tag-bookmark-i [_ e-mail link tag]
     (let [user-node (n4j/get-user-node e-mail)
-          bookmark-node (n4j/get-bookmark-node e-mail link)]
-      (when (and user-node bookmark-node)
+          bookmark-node (n4j/get-bookmark-node e-mail link)
+          tag-rel (n4j/get-tag-rel e-mail link tag)]
+      (when (and user-node bookmark-node (nil? tag-rel))
         (n4j/tag-bookmark user-node bookmark-node link tag))))
   (untag-bookmark-i [_ e-mail link tag]
     (let [tag-rel (n4j/get-tag-rel e-mail link tag)]
