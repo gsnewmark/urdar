@@ -259,7 +259,7 @@
       (doall (map #(s/signal (s/->RenderTagSignal n link %)) tags)))))
 
 (defn render-tag-menu-element [tag]
-  (let [selected? (and tag (st/tag-selected? tag))
+  (let [selected? (st/tag-selected? tag)
         tag-node (tag-link tag true selected?)]
     (ef/at js/document
            ["#tags"]
@@ -284,7 +284,7 @@
             :click
             (fn [event]
               (r/add-bookmark! link)
-              (remove-node {:node link-node}) )))))
+              (remove-node link-node))))))
 
 (defn render-recommendations-list
   [links]
