@@ -22,7 +22,7 @@
   (get-user-i [self e-mail] "Retrieves User instance if user is registered.")
   (bookmark-exists-i? [self e-mail link]
     "Checks whether given link is already bookmarked by user.")
-  (add-bookmark-i [self e-mail link]
+  (add-bookmark-i [self e-mail link title] [self e-mail link]
     "Bookmarks a given link (probably, creating it in DB) for the given user.
     Returns Bookmark instance.")
   (delete-bookmark-i [self e-mail link]
@@ -35,10 +35,10 @@
     "Retrieves all or quant number of bookmarks (instances of Bookmark) of
     given user sorted by their creation date (descending), optionally
     skipping first skip bookmarks.")
-  ;; TODO find a way to make keyword arguments
-  (update-bookmark-i [self e-mail link title note]
-    "Adds a title and/or note to a given bookmark. Returns instance
-    of Bookmark.")
+  (update-bookmark-i [self e-mail link note]
+    "Adds a note to a given bookmark.")
+  (get-title-i [self link]
+    "Retrieves a title for the given link if it is presented in DB.")
   (bookmark-tagged-i? [self e-mail link tag]
     "Checks whether given bookmark has given tag.")
   (tag-bookmark-i [self e-mail link tag]
@@ -69,7 +69,7 @@
 
 (defn- cypher-bookmark-result->Bookmark
   [res]
-  (let [{link "l.url" title "b.title?" note "b.note?"
+  (let [{link "l.url" title "l.title?" note "b.note?"
          tags "COLLECT(DISTINCT t.tag?)"
          date-added "b.date-added" :as b} res]
     (->Bookmark link title note tags date-added)))
@@ -86,10 +86,11 @@
     (when-let [node (n4j/get-user-node e-mail)] (node->User node)))
   (bookmark-exists-i? [_ e-mail link]
     (not (nil? (n4j/get-bookmark-node e-mail link))))
-  (add-bookmark-i [_ e-mail link]
+  (add-bookmark-i [self e-mail link] (add-bookmark-i self e-mail link nil))
+  (add-bookmark-i [_ e-mail link title]
     (let [user-node (n4j/get-user-node e-mail)
           link-node (or (n4j/get-link-node link)
-                        (n4j/create-link-node link))]
+                        (n4j/create-link-node link title))]
       (when (and user-node link-node)
         (some->> (n4j/create-bookmark-node user-node link-node)
                  (node->Bookmark link [])))))
@@ -105,12 +106,11 @@
     (map cypher-bookmark-result->Bookmark
          (n4j/get-bookmarks-for-user e-mail [skip quant])))
   (update-bookmark-i
-    [_ e-mail link title note]
+    [_ e-mail link note]
     (let [bookmark-node (n4j/get-bookmark-node e-mail link)
-          data (-> {}
-                   (#(if title (assoc % :title title) %))
-                   (#(if note (assoc % :note note) %)))]
+          data (-> {} (#(if note (assoc % :note note) %)))]
       (n4j/update-node bookmark-node data)))
+  (get-title-i [_ link] (n4j/get-link-title link))
   (bookmark-tagged-i? [_ e-mail link tag]
     (not (nil? (n4j/get-tag-rel e-mail link tag))))
   (tag-bookmark-i [_ e-mail link tag]
@@ -130,11 +130,13 @@
   (get-tags-i [_ e-mail] (n4j/get-tags-for-user e-mail))
   (recommend-bookmarks-i [_ randomness-factor n e-mail]
     (let [random-bookmarks
-          (into #{} (map #(get % "l.url")
+          (into #{} (map #(hash-map :url (get % "l.url")
+                                    :title (get % "l.title?"))
                          (n4j/random-bookmarks-for-user n e-mail)))
 
           recommended-bookmarks
-          (into #{} (map #(get % "url")
+          (into #{} (map #(hash-map :url (get % "url")
+                                    :title (get % "title"))
                          (n4j/recommended-bookmarks-for-user n e-mail)))
 
           number-of-recommended (count recommended-bookmarks)
@@ -180,3 +182,4 @@
 (def untag-bookmark (partial untag-bookmark-i u))
 (def bookmark-tagged? (partial bookmark-tagged-i? u))
 (def recommend-bookmarks (partial recommend-bookmarks-i u 0.3 10))
+(def get-title (partial get-title-i u))

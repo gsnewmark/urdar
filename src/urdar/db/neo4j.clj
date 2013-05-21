@@ -85,10 +85,11 @@
 (defn create-link-node
   "Creates a link as a node in graph and adds it to given (or default) index.
   Returns nil if link already exists or created node otherwise."
-  ([link] (create-link-node links-index link))
-  ([index link]
+  ([link title] (create-link-node links-index link title))
+  ([index link title]
      (create-and-index index "link" link (partial get-link-node index)
-                       {:url link :type "link"})))
+                       (merge {:url link :type "link"}
+                              (if title {:title title} {})))))
 
 (defn create-bookmark-node
   "Creates a bookmark as a node in graph and adds it to given (or default)
@@ -173,7 +174,7 @@
                      "MATCH (user)-[tag:tagged]->(b)-[:bookmarks]->(l), "
                      "(user)-[t:tagged]->(b) "
                      "WHERE tag.tag={tag} "
-                     "RETURN b.`date-added`, b.title?, b.note?, l.url, "
+                     "RETURN b.`date-added`, l.title?, b.note?, l.url, "
                      "COLLECT(DISTINCT t.tag?) "
                      "ORDER BY `b.date-added` DESC"
                      (when (and skip quant)
@@ -193,7 +194,7 @@
      (cy/tquery (str "START user=node:" (:name index) "({key}={value}) "
                      "MATCH (user)-[:has]->(b)-[:bookmarks]->(l), "
                      "(user)-[t?:tagged]->(b)"
-                     "RETURN b.`date-added`, b.title?, b.note?, l.url, "
+                     "RETURN b.`date-added`, l.title?, b.note?, l.url, "
                      "COLLECT(DISTINCT t.tag?) "
                      "ORDER BY `b.date-added` DESC"
                      (when (and skip quant)
@@ -212,9 +213,10 @@
                      "-[:bookmarks]->(other_link) "
                      "WHERE NOT(user-[:has]->()-[:bookmarks]->(other_link)) "
                      "WITH other.`e-mail` AS mail, "
-                     "COUNT(shared_link) AS slc, other_link.url AS url "
+                     "COUNT(shared_link) AS slc, other_link.url AS url, "
+                     "other_link.title? AS title "
                      "ORDER BY slc DESC "
-                     "RETURN url, COUNT(url) as cnt "
+                     "RETURN url, COUNT(url) as cnt, title "
                      "ORDER BY cnt DESC"
                      (when n (str " LIMIT " n)))
                 {:key (or (:key (meta index)) "e-mail") :value e-mail})))
@@ -239,9 +241,15 @@
              "WITH link AS l, user AS u "
              "SKIP " to-skip  " LIMIT " random-links-limit
              " WHERE NOT((u)-[:has]->()-[:bookmarks]->(l)) "
-             "RETURN l.url "
+             "RETURN l.url, l.title? "
              "LIMIT " n))
       {:key (or (:key (meta u-index)) "e-mail") :value e-mail})))
+
+(defn get-link-title
+  ([link] (get-link-title links-index link))
+  ([index link]
+     (when-let [link-node (get-link-node index link)]
+       (get-in link-node [:data :title]))))
 
 ;;; ## Entity deletion
 

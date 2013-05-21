@@ -2,9 +2,10 @@
   "Different API calls to external services."
   (:require [urdar.helpers.utils :as u]
             [clj-http.client :as http]
-            [cheshire.core :as json]))
+            [cheshire.core :as json]
+            [net.cgrand.enlive-html :as html]))
 
-;; ## Generic API caller
+;;; ## Generic API caller
 
 (defn api-get
   "Requests a given operation using given API. It is assumed that operation
@@ -19,7 +20,7 @@ begins with slash."
              :body
              (json/parse-string true))))
 
-;; ## Specific API calls
+;;; ## Specific API calls
 
 (defmulti get-user-mail-address
   "Retrieves e-mail address of user using external API (OAuth provider)."
@@ -41,3 +42,13 @@ begins with slash."
 
 (defmethod get-user-mail-address :default [_]
   "Unknown user.")
+
+(defn retrieve-title
+  "Retrieves a title of the given page."
+  [url]
+  (some-> (try
+            (html/html-resource (java.net.URL. url))
+            (catch Exception _ nil))
+          (html/select [:head :title])
+          first
+          html/text))

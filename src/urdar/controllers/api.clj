@@ -1,6 +1,7 @@
 (ns urdar.controllers.api
   (:require [urdar.db :as db]
-            [urdar.crossovers.validation :as v]))
+            [urdar.crossovers.validation :as v]
+            [urdar.helpers.external-api :as e]))
 
 ;;; TODO throw exceptions instead of edn-responses, create middleware
 ;;;      to transform them into response
@@ -35,8 +36,9 @@
     (edn-response :status 422)
     (if (db/bookmark-exists? e-mail link)
       (edn-response :status 409)
-      (edn-response
-       :body (into {} (db/add-bookmark e-mail link))))))
+      (let [title (or (db/get-title link) (e/retrieve-title link))]
+        (edn-response
+         :body (into {} (db/add-bookmark e-mail link title)))))))
 
 (defn delete-bookmark! [e-mail link]
   (if-not (and e-mail link (v/valid-url? link))
@@ -60,7 +62,7 @@
 (defn add-note! [e-mail link note]
   (if-not (and e-mail link note)
     (edn-response :status 422)
-    (do (db/update-bookmark e-mail link nil note)
+    (do (db/update-bookmark e-mail link note)
         (edn-response :status 204))))
 
 (defn get-recommendations [e-mail]

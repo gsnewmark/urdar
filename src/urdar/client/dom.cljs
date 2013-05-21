@@ -82,8 +82,8 @@
     "Please wait while recommendations are prepared..."]))
 
 (defn recommendation-node
-  [link]
-  (template/node [:li [:a {:href link :target "_blank"} link] " "
+  [link title]
+  (template/node [:li [:a {:href link :target "_blank"} (or title link)] " "
                   [:a {:href "#add-bookmark"} [:i.icon-bookmark]]]))
 
 (defn recommendations-list [] (template/node [:ul#recommended-links]))
@@ -276,8 +276,8 @@
 
 ;;; TODO update list when it's exhausted
 (defn render-recommendation
-  [node link]
-  (let [link-node (recommendation-node link)]
+  [node link title]
+  (let [link-node (recommendation-node link title)]
     (ef/at node (ef/append link-node))
     (ef/at link-node
            (events/listen
@@ -292,7 +292,8 @@
     (ef/at js/document
            ["#recs"]
            (ef/content recs-list))
-    (doseq [link links] (render-recommendation recs-list link))))
+    (doseq [{:keys [title url]} links]
+      (render-recommendation recs-list url title))))
 
 ;;; ## Event handlers
 

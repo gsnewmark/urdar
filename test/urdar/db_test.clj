@@ -109,44 +109,13 @@
     (is (not (db/bookmark-exists? e-mail link1)))
     (is (not (db/bookmark-exists? e-mail link2)))))
 
-(deftest bookmark-update-title-description
-  (let [e-mail "emilie@example.com"
-        link "http://emilie.example.com"
-        title "Example"
-        desc "Long description."
-        _ (db/register-user e-mail)
-        _ (db/add-bookmark e-mail link)
-        _ (db/update-bookmark e-mail link title desc)
-        r (db/get-bookmark e-mail link)]
-    (is (db/bookmark-exists? e-mail link))
-    (is (= urdar.db.Bookmark (class r)))
-    (is (= link (:link r)))
-    (is (not (nil? (:date-added r))))
-    (is (= title (:title r)))
-    (is (= desc (:note r)))))
-
-(deftest bookmark-update-title
-  (let [e-mail "johny@example.com"
-        link "http://johny.example.com"
-        title "Example"
-        _ (db/register-user e-mail)
-        _ (db/add-bookmark e-mail link)
-        _ (db/update-bookmark e-mail link title nil)
-        r (db/get-bookmark e-mail link)]
-    (is (db/bookmark-exists? e-mail link))
-    (is (= urdar.db.Bookmark (class r)))
-    (is (= link (:link r)))
-    (is (not (nil? (:date-added r))))
-    (is (= title (:title r)))
-    (is (nil? (:note r)))))
-
 (deftest bookmark-update-description
   (let [e-mail "connor@example.com"
         link "http://connor.example.com"
         desc "Long description."
         _ (db/register-user e-mail)
         _ (db/add-bookmark e-mail link)
-        _ (db/update-bookmark e-mail link nil desc)
+        _ (db/update-bookmark e-mail link desc)
         r (db/get-bookmark e-mail link)]
     (is (db/bookmark-exists? e-mail link))
     (is (= urdar.db.Bookmark (class r)))
@@ -254,82 +223,94 @@
      (is (= #{link1 link2 link3} (into #{} (map :link r))))
      (is (every? #(db/bookmark-tagged? e-mail (:link %) tag) r))
      (is (every? #((into #{} (:tags %)) tag) r))
-     (is (every? #(not (nil? (:date-added %))) r)))))
+     (is (every? #(not (nil? (:date-added %))) r))))
 
-(comment (deftest some-tagged-bookmarks-retrieval
-   (let [e-mail "cyrus@example.com"
-         link1 "http://cyrus.page1.example.com"
-         link2 "http://cyrus.page2.example.com"
-         link3 "http://cyrus.page3.example.com"
-         tag "cyrus.tag"
-         _ (db/register-user e-mail)
-         _ (db/add-bookmark e-mail link1)
-         _ (Thread/sleep 1000)
-         _ (db/add-bookmark e-mail link2)
-         _ (Thread/sleep 1000)
-         _ (db/add-bookmark e-mail link3)
-         _ (db/tag-bookmark e-mail link1 tag)
-         _ (db/tag-bookmark e-mail link2 tag)
-         _ (db/tag-bookmark e-mail link3 tag)
-         r (db/get-tagged-bookmarks e-mail tag 1 2)]
-     (is (every? #(= urdar.db.Bookmark (class %)) r))
-     (is (= #{link1 link2} (into #{} (map :link r))))
-     (is (every? #(db/bookmark-tagged? e-mail (:link %) tag) r))
-     (is (every? #((into #{} (:tags %)) tag) r))
-     (is (every? #(not (nil? (:date-added %))) r)))))
+         (deftest some-tagged-bookmarks-retrieval
+           (let [e-mail "cyrus@example.com"
+                 link1 "http://cyrus.page1.example.com"
+                 link2 "http://cyrus.page2.example.com"
+                 link3 "http://cyrus.page3.example.com"
+                 tag "cyrus.tag"
+                 _ (db/register-user e-mail)
+                 _ (db/add-bookmark e-mail link1)
+                 _ (Thread/sleep 1000)
+                 _ (db/add-bookmark e-mail link2)
+                 _ (Thread/sleep 1000)
+                 _ (db/add-bookmark e-mail link3)
+                 _ (db/tag-bookmark e-mail link1 tag)
+                 _ (db/tag-bookmark e-mail link2 tag)
+                 _ (db/tag-bookmark e-mail link3 tag)
+                 r (db/get-tagged-bookmarks e-mail tag 1 2)]
+             (is (every? #(= urdar.db.Bookmark (class %)) r))
+             (is (= #{link1 link2} (into #{} (map :link r))))
+             (is (every? #(db/bookmark-tagged? e-mail (:link %) tag) r))
+             (is (every? #((into #{} (:tags %)) tag) r))
+             (is (every? #(not (nil? (:date-added %))) r))))
 
-(comment (deftest recommendations-test
-   (let [n 8
-         randomness-factor 0.25
-         e-mail1 "oz@example.com"
-         e-mail2 "el@example.com"
-         e-mail3 "to@example.com"
-         link1 "http://oz.page1.example.com"
-         link2 "http://oz.page2.example.com"
-         link3 "http://oz.page3.example.com"
-         link4 "http://el.page1.example.com"
-         link5 "http://el.page2.example.com"
-         link6 "http://el.page3.example.com"
-         link7 "http://to.page1.example.com"
-         link8 "http://to.page2.example.com"
-         link9 "http://to.page3.example.com"
-         link10 "http://oz.el.page1.example.com"
-         link11 "http://oz.el.page2.example.com"
-         link12 "http://el.to.page1.example.com"
-         link13 "http://el.to.page2.example.com"
-         link14 "http://el.to.page3.example.com"
-         _ (db/register-user e-mail1)
-         _ (db/register-user e-mail2)
-         _ (db/register-user e-mail3)
-         _ (db/add-bookmark e-mail1 link1)
-         _ (db/add-bookmark e-mail1 link2)
-         _ (db/add-bookmark e-mail1 link3)
-         _ (db/add-bookmark e-mail2 link4)
-         _ (db/add-bookmark e-mail2 link5)
-         _ (db/add-bookmark e-mail2 link6)
-         _ (db/add-bookmark e-mail3 link7)
-         _ (db/add-bookmark e-mail3 link8)
-         _ (db/add-bookmark e-mail3 link9)
-         _ (db/add-bookmark e-mail1 link10)
-         _ (db/add-bookmark e-mail1 link11)
-         _ (db/add-bookmark e-mail2 link10)
-         _ (db/add-bookmark e-mail2 link11)
-         _ (db/add-bookmark e-mail2 link12)
-         _ (db/add-bookmark e-mail2 link13)
-         _ (db/add-bookmark e-mail2 link14)
-         _ (db/add-bookmark e-mail3 link12)
-         _ (db/add-bookmark e-mail3 link13)
-         _ (db/add-bookmark e-mail3 link14)
-         _ (Thread/sleep 500)
-         r1 (db/recommend-bookmarks-i db/u randomness-factor n e-mail1)
-         r2 (db/recommend-bookmarks-i db/u randomness-factor n e-mail2)
-         r3 (db/recommend-bookmarks-i db/u randomness-factor n e-mail3)]
-     (is (= n (count r1)))
-     (is (= n (count r2)))
-     (is (= n (count r3)))
-     (is (every? (complement (partial db/bookmark-exists? e-mail1)) r1))
-     (is (every? (complement (partial db/bookmark-exists? e-mail2)) r2))
-     (is (every? (complement (partial db/bookmark-exists? e-mail3)) r3))
-     (is (every? (into #{} r1) [link4 link5 link6 link12 link13 link14]))
-     (is (every? (into #{} r3) [link4 link5 link6 link10 link11]))
-     (is (every? (into #{} r2) [link1 link2 link3 link7 link8 link9])))))
+         (deftest recommendations-test
+           (let [n 8
+                 randomness-factor 0.25
+                 e-mail1 "oz@example.com"
+                 e-mail2 "el@example.com"
+                 e-mail3 "to@example.com"
+                 link1 "http://oz.page1.example.com"
+                 link2 "http://oz.page2.example.com"
+                 link3 "http://oz.page3.example.com"
+                 link4 "http://el.page1.example.com"
+                 link5 "http://el.page2.example.com"
+                 link6 "http://el.page3.example.com"
+                 link7 "http://to.page1.example.com"
+                 link8 "http://to.page2.example.com"
+                 link9 "http://to.page3.example.com"
+                 link10 "http://oz.el.page1.example.com"
+                 link11 "http://oz.el.page2.example.com"
+                 link12 "http://el.to.page1.example.com"
+                 link13 "http://el.to.page2.example.com"
+                 link14 "http://el.to.page3.example.com"
+                 _ (db/register-user e-mail1)
+                 _ (db/register-user e-mail2)
+                 _ (db/register-user e-mail3)
+                 _ (db/add-bookmark e-mail1 link1)
+                 _ (db/add-bookmark e-mail1 link2)
+                 _ (db/add-bookmark e-mail1 link3)
+                 _ (db/add-bookmark e-mail2 link4)
+                 _ (db/add-bookmark e-mail2 link5)
+                 _ (db/add-bookmark e-mail2 link6)
+                 _ (db/add-bookmark e-mail3 link7)
+                 _ (db/add-bookmark e-mail3 link8)
+                 _ (db/add-bookmark e-mail3 link9)
+                 _ (db/add-bookmark e-mail1 link10)
+                 _ (db/add-bookmark e-mail1 link11)
+                 _ (db/add-bookmark e-mail2 link10)
+                 _ (db/add-bookmark e-mail2 link11)
+                 _ (db/add-bookmark e-mail2 link12)
+                 _ (db/add-bookmark e-mail2 link13)
+                 _ (db/add-bookmark e-mail2 link14)
+                 _ (db/add-bookmark e-mail3 link12)
+                 _ (db/add-bookmark e-mail3 link13)
+                 _ (db/add-bookmark e-mail3 link14)
+                 _ (Thread/sleep 500)
+                 r1 (db/recommend-bookmarks-i db/u randomness-factor n e-mail1)
+                 r2 (db/recommend-bookmarks-i db/u randomness-factor n e-mail2)
+                 r3 (db/recommend-bookmarks-i db/u randomness-factor n e-mail3)]
+             (is (= n (count r1)))
+             (is (= n (count r2)))
+             (is (= n (count r3)))
+             (is (every? (complement (partial db/bookmark-exists? e-mail1)) r1))
+             (is (every? (complement (partial db/bookmark-exists? e-mail2)) r2))
+             (is (every? (complement (partial db/bookmark-exists? e-mail3)) r3))
+             (is (every? (into #{} (map :url r1))
+                         [link4 link5 link6 link12 link13 link14]))
+             (is (every? (into #{} (map :url r3)) [link4 link5 link6 link10 link11]))
+             (is (every? (into #{} (map :url r2))
+                         [link1 link2 link3 link7 link8 link9])))))
+
+(deftest link-title
+  (let [e-mail "collins@example.com"
+        link1 "http://collins1.example.com"
+        link2 "http://collins.example.com"]
+     (db/register-user e-mail)
+     (db/add-bookmark e-mail link1)
+     (db/add-bookmark e-mail link2 link2)
+     (is (= nil (db/get-title link1)))
+     (is (= link2 (db/get-title link2)))))

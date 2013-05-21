@@ -11,8 +11,7 @@
   (let [link (get-in c/config [:new-user-first-entry :link])
         tag (get-in c/config [:new-user-first-entry :tag])]
     (db/register-user e-mail)
-    (db/add-bookmark e-mail link)
-    (db/tag-bookmark e-mail tag link)))
+    (db/add-bookmark e-mail link "Urdar Source Code")))
 
 (defn index [{session :session :as request}]
   ;; TODO shouldn't overwrite session on each request

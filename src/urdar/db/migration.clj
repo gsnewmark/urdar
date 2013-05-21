@@ -1,6 +1,7 @@
 (ns urdar.db.migration
   (:require [urdar.config :as config]
             [urdar.db :as db]
+            [urdar.helpers.external-api :as e]
             [clojurewerkz.neocons.rest :as nr]
             [clojurewerkz.neocons.rest.nodes :as nn]
             [clojurewerkz.neocons.rest.cypher :as cy]))
@@ -12,7 +13,12 @@
     (nr/connect! url login password)
     (def users-index (nn/create-index "users"))
     (def tags-index (nn/create-index "tags"))
-    (def links-index (nn/create-index "links"))))
+    (def links-index (nn/create-index "links"))
+    (def links-index-v2 (nn/create-index "linksIndex"))))
+
+(defn update-node
+  [node data]
+  (nn/update node (merge (:data node) data)))
 
 (defn- retrieve-users-v1
   [index]
@@ -40,7 +46,27 @@
             (db/add-bookmark e-mail link)
             (doseq [tag tags] (db/tag-bookmark e-mail link tag))))))))
 
+(defn- retrieve-links-v2
+  [index]
+  (cy/tquery (str "START link=node:linksIndex(\"link:*\") RETURN link")))
+
+(defn- update-links-titles-v2
+  [index]
+  (let [links (retrieve-links-v2 index)]
+    (doseq [l (map #(get % "link") links)]
+      (when-not (get-in l [:data :title])
+        (let [url (get-in l [:data :url])
+              title (e/retrieve-title url)]
+          (when title
+            (update-node (nn/find-one (:name index) "link" url)
+                         {:title title})))))))
+
 (defn migrate-v1->v2
   []
   (init-connection)
   (recreate-data-v1->v2 users-index))
+
+(defn update-titles-v2
+  []
+  (init-connection)
+  (update-links-titles-v2 links-index-v2))
