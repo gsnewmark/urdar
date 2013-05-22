@@ -12,6 +12,7 @@
                  [clj-http "0.7.0"]
                  [cheshire "5.0.2"]
                  [clojurewerkz/neocons "1.1.0"]
+                 [clojurewerkz/elastisch "1.1.0"]
                  [fogus/ring-edn "0.2.0-SNAPSHOT"]
                  [enfocus "2.0.0-SNAPSHOT"]
                  [shoreleave "0.3.0"]

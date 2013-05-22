@@ -24,8 +24,10 @@
   :login ""
   :password ""}
 
+ :es
+ {:url "http://localhost:9200"}
+
  ;; Data for new user
  :new-user-first-entry
- {:link "https://github.com/gsnewmark/urdar"
-  :tag "open-source"}
+ {:link "https://github.com/gsnewmark/urdar"}
 }
