@@ -5,3 +5,4 @@ jdk:
   - openjdk6
 services:
   - neo4j
+  - elasticsearch

@@ -6,7 +6,7 @@
             [clojurewerkz.elastisch.query :as q]
             [clojurewerkz.elastisch.rest.response :as esrsp]))
 
-(def bookmarks-index {:name "bookmarks-index-3" :type "bookmark"})
+(def bookmarks-index {:name "bookmarks-index" :type "bookmark"})
 
 (defn init-connection
   "Connects to the ElasticSearch endpoint and creates an search index for
@@ -25,10 +25,7 @@
                             :note {:type "string" :analyzer "standard"}}}}]
          (esi/create (:name bookmarks-index) :mappings mapping-types)))))
 
-(defn create-bookmark-doc
-  "Creates a bookmark information document (map) with the given attributes."
-  [e-mail link title note]
-  {:e-mail e-mail :link link :title title :note note})
+(defrecord BookmarkDoc [e-mail link title note])
 
 (defn index-bookmark
   "Adds the given bookmark information document to the search index."
@@ -36,9 +33,9 @@
      (index-bookmark bookmarks-index bookmark-doc))
   ([index bookmark-doc]
      (let [{:keys [type name]} index]
-       (println (esd/create name type bookmark-doc)))))
+       (esd/create name type bookmark-doc))))
 
-(defn- find-bookmark-id
+(defn find-bookmark-id
   "Finds an ID in search index of the given bookmark."
   ([e-mail link] (find-bookmark-id bookmarks-index e-mail link))
   ([index e-mail link]
