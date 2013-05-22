@@ -38,11 +38,39 @@
      (let [{:keys [type name]} index]
        (println (esd/create name type bookmark-doc)))))
 
-(comment  ;;; TODO
-  (defn unindex-bookmark)
+(defn- find-bookmark-id
+  "Finds an ID in search index of the given bookmark."
+  ([e-mail link] (find-bookmark-id bookmarks-index e-mail link))
+  ([index e-mail link]
+     (let [res  (esd/search (:name index) (:type index)
+                            :filter {:and [{:term {:e-mail e-mail}}
+                                           {:term {:link link}}]})
+           hit (first (esrsp/hits-from res))]
+       (:_id hit))))
 
-;;; TODO
-  (defn update-bookmark))
+(defn unindex-all-bookmarks
+  "Removes all bookmarks of the given user (specified by e-mail) from the
+  search index."
+  ([e-mail] (unindex-all-bookmarks bookmarks-index e-mail))
+  ([index e-mail]
+     (esd/delete-by-query (:name index) (:type index)
+                          {:filtered {:filter {:term {:e-mail e-mail}}}})))
+
+(defn unindex-bookmark
+  "Removes the given bookmark (specified by user's e-mail and link) from
+  search index."
+  ([e-mail link] (unindex-bookmark bookmarks-index e-mail link))
+  ([index e-mail link]
+     (when-let [id (find-bookmark-id index e-mail link)]
+       (esd/delete (:name index) (:type index) id))))
+
+(defn update-bookmark
+  "Updates bookmark stored in the search index with new information."
+  ([e-mail link bookmark-doc]
+     (update-bookmark bookmarks-index e-mail link bookmark-doc))
+  ([index e-mail link bookmark-doc]
+     (let [id (find-bookmark-id e-mail link)]
+       (esd/put (:name index) (:type index) id bookmark-doc))))
 
 (defn- es-result->map
   [es-result]
@@ -53,11 +81,12 @@
   "Searches for bookmarks of the given user (specified by e-mail) that
   satisfies the given query (simple text string). Returns `quant` results
   starting from `from`."
-  [index from quant e-mail query]
-  (let [res  (esd/search (:name index) (:type index)
-                         ;:query (q/match-all)
-                         :query (q/match "_all" query)
-                         :filter {:term {:e-mail e-mail}}
-                         :from from :size quant)
-        hits (esrsp/hits-from res)]
-    (map es-result->map hits)))
+  ([from quant e-mail query]
+     (find-bookmarks bookmarks-index from quant e-mail query))
+  ([index from quant e-mail query]
+     (let [res  (esd/search (:name index) (:type index)
+                            :query (q/match "_all" query)
+                            :filter {:term {:e-mail e-mail}}
+                            :from from :size quant)
+           hits (esrsp/hits-from res)]
+       (map es-result->map hits))))
