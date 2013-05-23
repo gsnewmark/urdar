@@ -58,6 +58,7 @@
     s/BookmarkAddedSignal
     (react [signal]
       (let [{:keys [link new? tags title note]} signal]
+        (st/set-search! nil)
         (st/bookmark-fetched!)
         (d/new-link-validation-succeeded)
         (d/render-bookmark link new? tags title note)
@@ -74,4 +75,11 @@
     (react [signal]
       (let [{:keys [node to-edit? save? link note]} signal]
         (when save? (r/add-note! link note))
-        (d/render-note node to-edit? link note)))))
+        (d/render-note node to-edit? link note)))
+    s/SearchSignal
+    (react [signal]
+      (let [{:keys [query]} signal]
+        (when-not (empty? query)
+          (st/set-search! query)
+          (s/signal (s/->TagFilterChangedSignal nil))
+          (d/unselect-tag-filters))))))

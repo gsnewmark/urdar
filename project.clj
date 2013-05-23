@@ -21,7 +21,8 @@
             [lein-cljsbuild "0.3.2"]
             [lein-marginalia "0.7.1"]]
   :main urdar.server
-  :ring {:handler urdar.server/app}
+  :ring {:handler urdar.server/app
+         :init urdar.search/init-connection}
   :resource-paths ["resources"]
   :cljsbuild
   {:crossovers [urdar.crossovers]

@@ -15,6 +15,10 @@
        [bookmarks-to-fetch skip-bookmarks tag
         :as {{e-mail :e-mail} :session}]
        (api/get-tagged-bookmarks e-mail tag skip-bookmarks bookmarks-to-fetch))
+  (GET "/bookmarks/:skip-bookmarks/:bookmarks-to-fetch/:tag/:query"
+       [bookmarks-to-fetch skip-bookmarks query
+        :as {{e-mail :e-mail} :session}]
+       (api/search-bookmarks e-mail query skip-bookmarks bookmarks-to-fetch))
   (GET "/tags" {{e-mail :e-mail} :session} (api/get-tags e-mail))
   (GET "/recommendations" {{e-mail :e-mail} :session}
        (api/get-recommendations e-mail))

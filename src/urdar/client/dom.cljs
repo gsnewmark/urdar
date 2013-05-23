@@ -33,6 +33,14 @@
                    :link ["#control-panel #add-bookmark #link-to-add"]
                    (ef/get-prop :value)))))
 
+(defn read-query
+  "Reads a current value of link in text field."
+  []
+  (string/trim
+   (:link (ef/from js/document
+                   :link ["#control-panel #search-input"]
+                   (ef/get-prop :value)))))
+
 (defn read-tag-to-add
   "Reads a current value of link in new tag text field."
   [node]
@@ -68,6 +76,9 @@
     (ef/at js/document
            ["#tags"]
            (ef/content ""))))
+
+(defn unselect-tag-filters []
+  (ef/at js/document [".tag-filter"] (ef/remove-class "btn-success")))
 
 (em/defaction tag-filter-selected [tag]
   [".tag-filter"] (ef/remove-class "btn-success")
@@ -131,7 +142,7 @@
 (defn note-template
   [note]
   (template/node [:span
-                  [:button.edit-note! {:href "#edit-note"}
+                  [:button.btn.edit-note! {:href "#edit-note"}
                    [:i.icon-edit] "Edit note"]
                   [:div.note note]]))
 
@@ -139,7 +150,7 @@
   [note]
   (template/node
    [:span
-    [:button.save-note! [:i.icon-save] "Save changes"]
+    [:button.btn.save-note! [:i.icon-save] "Save changes"]
     [:textarea.note {:placeholder "Your notes goes here"} note]]))
 
 (defn bookmark-div
@@ -195,7 +206,9 @@
            [".set-tag!"]
            (events/listen
             :click
-            (fn [event] (s/signal (s/->TagFilterChangedSignal tag)))))))
+            (fn [event]
+              (st/set-search! nil)
+              (s/signal (s/->TagFilterChangedSignal tag)))))))
 
 (defn- add-tag-clicked
   [link n event]
@@ -268,7 +281,9 @@
            [".set-tag!"]
            (events/listen
             :click
-            (fn [event] (s/signal (s/->TagFilterChangedSignal tag)))))))
+            (fn [event]
+              (st/set-search! nil)
+              (s/signal (s/->TagFilterChangedSignal tag)))))))
 
 (em/defaction render-recommendations-are-loading []
   ["#recs"]
@@ -308,13 +323,20 @@
       (r/add-bookmark! link)
       (s/signal (s/->NewLinkValidationFailed "Incorrect URL.")))))
 
+(defn- search-clicked
+  [event]
+  (let [query (read-query)]
+    (s/signal (s/->SearchSignal query))))
+
 (em/defaction add-handlers []
   ["#link-to-add"]
   (generate-enter-up-listener add-new-link-clicked)
   ["#add-bookmark!"]
-  (events/listen
-   :click
-   add-new-link-clicked)
+  (events/listen :click add-new-link-clicked)
+  ["#search-input"]
+  (generate-enter-up-listener search-clicked)
+  ["#search!"]
+  (events/listen :click search-clicked)
   ["#recs-toggle"]
   (events/listen
    :click

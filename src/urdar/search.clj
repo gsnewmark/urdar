@@ -71,8 +71,7 @@
 
 (defn- es-result->map
   [es-result]
-  (let [info (:_source es-result)]
-    (select-keys info [:link :title])))
+  (get-in es-result [:_source :link]))
 
 (defn find-bookmarks
   "Searches for bookmarks of the given user (specified by e-mail) that
@@ -81,6 +80,7 @@
   ([from quant e-mail query]
      (find-bookmarks bookmarks-index from quant e-mail query))
   ([index from quant e-mail query]
+     ;; TODO find way to return only :link in query itself
      (let [res  (esd/search (:name index) (:type index)
                             :query (q/match "_all" query)
                             :filter {:term {:e-mail e-mail}}

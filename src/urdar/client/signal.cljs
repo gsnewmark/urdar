@@ -23,3 +23,4 @@
 (defrecord NewLinkValidationFailed [msg])
 (defrecord NewTagValidationFailed [node msg])
 (defrecord NoteChangeSignal [node to-edit? save? link note])
+(defrecord SearchSignal [query])

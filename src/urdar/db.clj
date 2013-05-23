@@ -63,8 +63,8 @@
     (->User e-mail date-signed)))
 
 (defn- node->Bookmark
-  [link tags node]
-  (when-let [{:keys [title note date-added]} (:data node)]
+  [link title tags node]
+  (when-let [{:keys [note date-added]} (:data node)]
     (->Bookmark link title note tags date-added)))
 
 (defn- cypher-bookmark-result->Bookmark
@@ -93,14 +93,15 @@
                         (n4j/create-link-node link title))]
       (when (and user-node link-node)
         (some->> (n4j/create-bookmark-node user-node link-node)
-                 (node->Bookmark link [])))))
+                 (node->Bookmark link title [])))))
   (delete-bookmark-i [_ e-mail link]
     (when-let [node (n4j/get-bookmark-node e-mail link)]
       (n4j/delete-bookmark-node e-mail link node)))
-  (get-bookmark-i [_ e-mail link]
+  (get-bookmark-i [self e-mail link]
     (when-let [node (n4j/get-bookmark-node e-mail link)]
-      (node->Bookmark link (n4j/get-tags-for-bookmark e-mail link)
-                      node)))
+      (let [title (get-title-i self link)]
+       (node->Bookmark link title (n4j/get-tags-for-bookmark e-mail link)
+                       node))))
   (get-bookmarks-i [self e-mail] (get-bookmarks-i self e-mail nil nil))
   (get-bookmarks-i [_ e-mail skip quant]
     (map cypher-bookmark-result->Bookmark

@@ -12,12 +12,16 @@
 (defn fetch-bookmarks
   "Retrieves all currently existing bookmarks of user from DB. "
   ([]
-     (let [{:keys [bookmarks-fetched bookmarks-to-fetch tag]} @st/state]
-       (fetch-bookmarks tag bookmarks-fetched bookmarks-to-fetch)))
-  ([tag bookmarks-fetched bookmarks-to-fetch]
+     (let [{:keys [bookmarks-fetched bookmarks-to-fetch tag search]} @st/state]
+       (fetch-bookmarks tag search bookmarks-fetched bookmarks-to-fetch)))
+  ([tag search bookmarks-fetched bookmarks-to-fetch]
      (remote/request
-      [:get (str "/_/bookmarks/" bookmarks-fetched "/"
-                 bookmarks-to-fetch "/" tag)]
+      [:get
+       (str "/_/bookmarks/" bookmarks-fetched "/"
+            bookmarks-to-fetch "/"
+            (if search
+              (str (or tag "+") "/" search)
+              tag))]
       :headers {"Content-Type" "application/edn;charset=utf-8"}
       :on-success
       (fn [{body :body}]
