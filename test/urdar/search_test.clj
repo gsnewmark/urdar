@@ -3,7 +3,7 @@
             [clojure.test :refer :all]
             [clojurewerkz.elastisch.rest.index :as esi]))
 
-(use-fixtures :once (fn [t] (s/init-connection) (t)))
+(use-fixtures :once (fn [t] (s/init-connection) (esi/refresh) (t)))
 
 (deftest indexing-and-id-retrieval
   (let [e-mail "jil@example.com"
