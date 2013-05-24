@@ -1,4 +1,4 @@
-(ns urdar.db.migration
+(ns urdar.helpers.migration
   (:require [urdar.config :as config]
             [urdar.db :as db]
             [urdar.search :as s]
