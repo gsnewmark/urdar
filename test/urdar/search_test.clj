@@ -69,7 +69,6 @@
         s3 (s/find-bookmarks 1 1 e-mail query)]
     (is (= 2 (count s1)))
     (is (= #{link1 link2} (into #{} s1)))
-    (is (= #{title1 title2} (into #{} s1)))
     (is (= 1 (count s2)))
     (is (= link2 (first s2)))
     (is (= 1 (count s3)))
