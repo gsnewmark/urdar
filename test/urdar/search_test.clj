@@ -68,14 +68,12 @@
         s2 (s/find-bookmarks 0 1 e-mail query)
         s3 (s/find-bookmarks 1 1 e-mail query)]
     (is (= 2 (count s1)))
-    (is (= #{link1 link2} (into #{} (map :link s1))))
-    (is (= #{title1 title2} (into #{} (map :title s1))))
+    (is (= #{link1 link2} (into #{} s1)))
+    (is (= #{title1 title2} (into #{} s1)))
     (is (= 1 (count s2)))
-    (is (= link2 (:link (first s2))))
-    (is (= title2 (:title (first s2))))
+    (is (= link2 (first s2)))
     (is (= 1 (count s3)))
-    (is (= link1 (:link (first s3))))
-    (is (= title1 (:title (first s3))))))
+    (is (= link1 (first s3)))))
 
 (deftest bigger-searching
   (let [e-mail "jane@example.com"
@@ -111,5 +109,4 @@
         query "Seventh note"
         s (s/find-bookmarks 0 10 e-mail query)]
     (is (= 1 (count s)))
-    (is (= link7 (:link (first s))))
-    (is (= title7 (:title (first s))))))
+    (is (= link7 (first s)))))
