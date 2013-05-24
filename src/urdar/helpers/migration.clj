@@ -1,7 +1,10 @@
 (ns urdar.db.migration
   (:require [urdar.config :as config]
             [urdar.db :as db]
+            [urdar.search :as s]
             [urdar.helpers.external-api :as e]
+            [clojurewerkz.elastisch.rest :as esr]
+            [clojurewerkz.elastisch.rest.document :as esd]
             [clojurewerkz.neocons.rest :as nr]
             [clojurewerkz.neocons.rest.nodes :as nn]
             [clojurewerkz.neocons.rest.cypher :as cy]))
@@ -14,7 +17,12 @@
     (def users-index (nn/create-index "users"))
     (def tags-index (nn/create-index "tags"))
     (def links-index (nn/create-index "links"))
-    (def links-index-v2 (nn/create-index "linksIndex"))))
+    (def links-index-v2 (nn/create-index "linksIndex"))
+    (def users-index-v2 (nn/create-index "usersIndex"))
+    (esr/connect! url)))
+
+(def ^{:private true}
+  bookmarks-search-index-v2 {:name "bookmarks-index" :type "bookmark"})
 
 (defn update-node
   [node data]
@@ -61,6 +69,29 @@
             (update-node (nn/find-one (:name index) "link" url)
                          {:title title})))))))
 
+(defn- retrieve-users-v2
+  [index]
+  (cy/tquery (str "START user=node:" (or (:name index) "usersIndex")
+                  "(\"e-mail:*\") RETURN user.e-mail")))
+
+(defn- retrieve-bookmarks-for-user-v2
+  [index e-mail]
+  (cy/tquery (str "START user=node:" (or (:name index) "usersIndex")
+                  "({key}={value}) "
+                  "MATCH (user)-[:has]->(b)-[:bookmarks]->(l), "
+                  "RETURN l.title?, b.note?, l.url")
+             {:key (or (:key (meta index)) "e-mail") :value e-mail}))
+
+(defn- add-bookmark-to-search-index
+  [users-index si-name si-type]
+  (let [e-mails (map #(get % "user.e-mail") (retrieve-users-v2 users-index))]
+    (doseq [e-mail e-mails]
+      (let [bookmarks (retrieve-bookmarks-for-user-v1 users-index e-mail)]
+        (doseq [b bookmarks]
+          (let [{link "l.url" title "l.title?" note "b.note?"} b
+                doc (s/->BookmarkDoc e-mail link title note)]
+            (esd/create si-name si-type doc)))))))
+
 (defn migrate-v1->v2
   []
   (init-connection)
@@ -70,3 +101,10 @@
   []
   (init-connection)
   (update-links-titles-v2 links-index-v2))
+
+(defn add-to-search-index-v2
+  []
+  (init-connection)
+  (add-bookmark-to-search-index users-index-v2
+                                (:name bookmarks-search-index-v2)
+                                (:type bookmarks-search-index-v2)))
