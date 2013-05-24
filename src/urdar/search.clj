@@ -20,8 +20,7 @@
               {:properties {:e-mail {:type "string" :index "not_analyzed"}
                             :title {:type "string" :analyzer "standard"
                                     :boost 2.0}
-                            :link {:type "string" :index "not_analyzed"
-                                   :boost 2.0}
+                            :link {:type "string" :index "not_analyzed"}
                             :note {:type "string" :analyzer "standard"}}}}]
          (esi/create (:name bookmarks-index) :mappings mapping-types)))))
 

@@ -11,6 +11,7 @@
        [bookmarks-to-fetch skip-bookmarks
         :as {{e-mail :e-mail} :session}]
        (api/get-bookmarks e-mail skip-bookmarks bookmarks-to-fetch))
+  ;; TODO tag, query should be "body" parameters (not part of path)
   (GET "/bookmarks/:skip-bookmarks/:bookmarks-to-fetch/:tag"
        [bookmarks-to-fetch skip-bookmarks tag
         :as {{e-mail :e-mail} :session}]

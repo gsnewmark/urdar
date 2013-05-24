@@ -26,6 +26,7 @@
   (d/add-handlers)
   (r/fetch-tags true)
   (r/fetch-bookmarks)
+  ;; TODO find out why search in state is reseted
   (set! (.-onscroll js/window) (es/generate-on-scroll r/fetch-bookmarks))
   (set! (.-onresize js/window) #(s/set-bookmarks-to-fetch (items-to-fetch)))
   (brepl/connect))

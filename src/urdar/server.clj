@@ -1,6 +1,7 @@
 (ns urdar.server
   (:require [urdar.config :as cfg]
             [urdar.routes :as routes]
+            [urdar.search :as s]
             [compojure.core :as compojure :refer [defroutes ANY]]
             [compojure.route :as route]
             [compojure.handler :as handler]
@@ -65,5 +66,6 @@
   (let [port (Integer. (or port
                            (System/getenv "PORT")
                            5000))]
+    (s/init-connection)
     (jetty/run-jetty #'app {:port  port
                            :join? false})))

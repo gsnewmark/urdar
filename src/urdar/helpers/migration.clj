@@ -9,20 +9,31 @@
             [clojurewerkz.neocons.rest.nodes :as nn]
             [clojurewerkz.neocons.rest.cypher :as cy]))
 
+(def ^{:private true}
+  bookmarks-search-index-v2 {:name "bookmarks-index" :type "bookmark"})
+
 (defn- init-connection
   "Initiate connection to Neo4j REST API."
   []
-  (let [{:keys [url login password]} (:neo4j config/config)]
+  (let [{:keys [url login password]} (:neo4j config/config)
+        {es-url :url} (:es config/config)]
     (nr/connect! url login password)
     (def users-index (nn/create-index "users"))
     (def tags-index (nn/create-index "tags"))
     (def links-index (nn/create-index "links"))
     (def links-index-v2 (nn/create-index "linksIndex"))
     (def users-index-v2 (nn/create-index "usersIndex"))
-    (esr/connect! url)))
-
-(def ^{:private true}
-  bookmarks-search-index-v2 {:name "bookmarks-index" :type "bookmark"})
+    (esr/connect! es-url)
+    (when-not (esi/exists? (:name bookmarks-search-index-v2))
+       (let [mapping-types
+             {(:type bookmarks-search-index-v2)
+              {:properties {:e-mail {:type "string" :index "not_analyzed"}
+                            :title {:type "string" :analyzer "standard"
+                                    :boost 2.0}
+                            :link {:type "string" :index "not_analyzed"}
+                            :note {:type "string" :analyzer "standard"}}}}]
+         (esi/create (:name bookmarks-search-index-v2)
+                     :mappings mapping-types)))))
 
 (defn update-node
   [node data]
@@ -72,27 +83,27 @@
 (defn- retrieve-users-v2
   [index]
   (cy/tquery (str "START user=node:" (or (:name index) "usersIndex")
-                  "(\"e-mail:*\") RETURN user.e-mail")))
+                  "(\"e-mail:*\") RETURN user.`e-mail`")))
 
 (defn- retrieve-bookmarks-for-user-v2
   [index e-mail]
   (cy/tquery (str "START user=node:" (or (:name index) "usersIndex")
                   "({key}={value}) "
-                  "MATCH (user)-[:has]->(b)-[:bookmarks]->(l), "
+                  "MATCH (user)-[:has]->(b)-[:bookmarks]->(l) "
                   "RETURN l.title?, b.note?, l.url")
-             {:key (or (:key (meta index)) "e-mail") :value e-mail}))
+             {:key "e-mail" :value e-mail}))
 
 (defn- add-bookmark-to-search-index
-  [users-index si-name si-type]
-  (let [e-mails (map #(get % "user.e-mail") (retrieve-users-v2 users-index))]
+  [u-index si-name si-type]
+  (let [e-mails (map #(get % "user.e-mail") (retrieve-users-v2 u-index))]
     (doseq [e-mail e-mails]
-      (let [bookmarks (retrieve-bookmarks-for-user-v1 users-index e-mail)]
+      (let [bookmarks (retrieve-bookmarks-for-user-v2 u-index e-mail)]
         (doseq [b bookmarks]
           (let [{link "l.url" title "l.title?" note "b.note?"} b
                 doc (s/->BookmarkDoc e-mail link title note)]
             (esd/create si-name si-type doc)))))))
 
-(defn migrate-v1->v2
+(defn migrate-v1-v2
   []
   (init-connection)
   (recreate-data-v1->v2 users-index))
