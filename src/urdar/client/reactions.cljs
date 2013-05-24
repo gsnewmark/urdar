@@ -58,7 +58,7 @@
     s/BookmarkAddedSignal
     (react [signal]
       (let [{:keys [link new? tags title note]} signal]
-        (st/set-search! nil)
+        (when new? (st/set-query! nil))
         (st/bookmark-fetched!)
         (d/new-link-validation-succeeded)
         (d/render-bookmark link new? tags title note)
@@ -80,6 +80,6 @@
     (react [signal]
       (let [{:keys [query]} signal]
         (when-not (empty? query)
-          (st/set-search! query)
+          (st/set-query! query)
           (s/signal (s/->TagFilterChangedSignal nil))
           (d/unselect-tag-filters))))))

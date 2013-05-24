@@ -142,7 +142,7 @@
 (defn note-template
   [note]
   (template/node [:span
-                  [:button.btn.edit-note! {:href "#edit-note"}
+                  [:button.btn.btn-small.edit-note! {:href "#edit-note"}
                    [:i.icon-edit] "Edit note"]
                   [:div.note note]]))
 
@@ -150,7 +150,7 @@
   [note]
   (template/node
    [:span
-    [:button.btn.save-note! [:i.icon-save] "Save changes"]
+    [:button.btn.btn-small.save-note! [:i.icon-save] "Save changes"]
     [:textarea.note {:placeholder "Your notes goes here"} note]]))
 
 (defn bookmark-div
@@ -282,7 +282,7 @@
            (events/listen
             :click
             (fn [event]
-              (st/set-search! nil)
+              (st/set-query! nil)
               (s/signal (s/->TagFilterChangedSignal tag)))))))
 
 (em/defaction render-recommendations-are-loading []

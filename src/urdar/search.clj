@@ -50,7 +50,8 @@
   ([e-mail] (unindex-all-bookmarks bookmarks-index e-mail))
   ([index e-mail]
      (esd/delete-by-query (:name index) (:type index)
-                          {:filtered {:filter {:term {:e-mail e-mail}}}})))
+                          {:filtered {:query (q/match-all)
+                                      :filter {:term {:e-mail e-mail}}}})))
 
 (defn unindex-bookmark
   "Removes the given bookmark (specified by user's e-mail and link) from

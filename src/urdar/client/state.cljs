@@ -3,7 +3,7 @@
 
 ;;; TODO bookmarks-to-fetch should be based on screen height
 (def state (atom {:bookmarks-fetched 0 :bookmarks-to-fetch 20 :tag nil
-                  :bookmarks-id 0 :search nil}))
+                  :bookmarks-id 0 :query nil}))
 
 (defn bookmark-fetched! []
   (swap! state update-in [:bookmarks-fetched] inc))
@@ -21,8 +21,8 @@
   (swap! state assoc :tag tag)
   (swap! state assoc :bookmarks-fetched 0))
 
-(defn set-search! [query]
-  (swap! state assoc :search query))
+(defn set-query! [query]
+  (swap! state assoc :query query))
 
 (defn unset-tag! [tag]
   (let [{tag-selected :tag bookmarks-fetched :bookmarks-fetched} @state]
