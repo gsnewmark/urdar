@@ -197,7 +197,7 @@
                      "COLLECT(DISTINCT t.tag?) "
                      "ORDER BY `b.date-added` DESC"
                      (when (and skip quant)
-                       " SKIP {sk} LIMIT {lm}"))
+                       " SKIP " skip " LIMIT {lm}"))
                 (merge {:key (or (:key (meta index)) "e-mail") :value e-mail}
                        (if (and skip quant) {:sk skip :lm quant} {})))))
 
