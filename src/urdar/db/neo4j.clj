@@ -178,8 +178,9 @@
                      "ORDER BY `b.date-added` DESC"
                      (when (and skip quant)
                        " SKIP {s} LIMIT {l}"))
-                {:key (or (:key (meta index)) "e-mail") :value e-mail
-                 :tag tag :s skip :l quant})))
+                (merge {:key (or (:key (meta index)) "e-mail") :value e-mail
+                        :tag tag}
+                       (if (and skip quant) {:s skip :l quant} {})))))
 
 (defn get-bookmarks-for-user
   "Retrieves link, title, note, tags and date added for quant bookmarks
@@ -197,8 +198,8 @@
                      "ORDER BY `b.date-added` DESC"
                      (when (and skip quant)
                        " SKIP {s} LIMIT {l}"))
-                {:key (or (:key (meta index)) "e-mail") :value e-mail
-                 :s skip :l quant})))
+                (merge {:key (or (:key (meta index)) "e-mail") :value e-mail}
+                       (if (and skip quant) {:s skip :l quant} {})))))
 
 (defn recommended-bookmarks-for-user
   "Finds n (or lesser) links that user hasn't yet bookmarked, but might be
