@@ -169,6 +169,7 @@
   ([e-mail tag skip-quant-vec]
      (get-tagged-bookmarks-for-user users-index e-mail tag skip-quant-vec))
   ([index e-mail tag [skip quant]]
+     ;; TODO remove concatenation?
      (cy/tquery (str "START user=node:" (:name index) "({key}={value}) "
                      "MATCH (user)-[tag:tagged]->(b)-[:bookmarks]->(l), "
                      "(user)-[t:tagged]->(b) "
@@ -177,10 +178,9 @@
                      "COLLECT(DISTINCT t.tag?) "
                      "ORDER BY `b.date-added` DESC"
                      (when (and skip quant)
-                       " SKIP {sk} LIMIT {lm}"))
-                (merge {:key (or (:key (meta index)) "e-mail") :value e-mail
-                        :tag tag}
-                       (if (and skip quant) {:sk skip :lm quant} {})))))
+                       (str " SKIP " skip " LIMIT " quant)))
+                {:key (or (:key (meta index)) "e-mail") :value e-mail
+                 :tag tag})))
 
 (defn get-bookmarks-for-user
   "Retrieves link, title, note, tags and date added for quant bookmarks
@@ -190,6 +190,7 @@
   ([e-mail skip-quant-vec]
      (get-bookmarks-for-user users-index e-mail skip-quant-vec))
   ([index e-mail [skip quant]]
+     ;; TODO remove concatenation?
      (cy/tquery (str "START user=node:" (:name index) "({key}={value}) "
                      "MATCH (user)-[:has]->(b)-[:bookmarks]->(l), "
                      "(user)-[t?:tagged]->(b) "
@@ -197,9 +198,8 @@
                      "COLLECT(DISTINCT t.tag?) "
                      "ORDER BY `b.date-added` DESC"
                      (when (and skip quant)
-                       " SKIP " skip " LIMIT {lm}"))
-                (merge {:key (or (:key (meta index)) "e-mail") :value e-mail}
-                       (if (and skip quant) {:sk skip :lm quant} {})))))
+                       (str " SKIP " skip " LIMIT " quant)))
+                {:key (or (:key (meta index)) "e-mail") :value e-mail})))
 
 (defn recommended-bookmarks-for-user
   "Finds n (or lesser) links that user hasn't yet bookmarked, but might be
@@ -218,9 +218,9 @@
                      "ORDER BY slc DESC "
                      "RETURN url, COUNT(url) as cnt, title "
                      "ORDER BY cnt DESC"
-                     (when n " LIMIT {lm} "))
+                     (when n " LIMIT {n}"))
                 {:key (or (:key (meta index)) "e-mail") :value e-mail
-                 :lm n})))
+                 :n n})))
 
 (defn random-bookmarks-for-user
   "Finds n (or lesser) random links that user hasn't yet bookmarked."
@@ -243,9 +243,9 @@
              "SKIP {toskip} LIMIT {rndlim} "
              " WHERE NOT((u)-[:has]->()-[:bookmarks]->(l)) "
              "RETURN l.url, l.title? "
-             "LIMIT {l}")
+             "LIMIT {n}")
         {:key (or (:key (meta u-index)) "e-mail") :value e-mail
-         :l n :toskip to-skip :rndlim random-links-limit
+         :n n :toskip to-skip :rndlim random-links-limit
          :query (str lkey ":" lvalue)}))))
 
 (defn get-link-title
