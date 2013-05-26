@@ -14,7 +14,6 @@
     (db/add-bookmark e-mail link "Urdar Source Code")))
 
 (defn index [{session :session :as request}]
-  ;; TODO shouldn't overwrite session on each request
   (if (friend/authorized? #{:urdar/user} (friend/identity request))
     (let [e-mail (or (:e-mail session) (api/get-user-mail-address request))
           session (assoc session :e-mail e-mail)]

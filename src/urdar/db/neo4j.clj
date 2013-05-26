@@ -169,7 +169,6 @@
   ([e-mail tag skip-quant-vec]
      (get-tagged-bookmarks-for-user users-index e-mail tag skip-quant-vec))
   ([index e-mail tag [skip quant]]
-     ;; TODO remove concatenation?
      (cy/tquery (str "START user=node:" (:name index) "({key}={value}) "
                      "MATCH (user)-[tag:tagged]->(b)-[:bookmarks]->(l), "
                      "(user)-[t:tagged]->(b) "
@@ -178,9 +177,9 @@
                      "COLLECT(DISTINCT t.tag?) "
                      "ORDER BY `b.date-added` DESC"
                      (when (and skip quant)
-                       (str " SKIP " skip " LIMIT " quant)))
+                       " SKIP {s} LIMIT {l}"))
                 {:key (or (:key (meta index)) "e-mail") :value e-mail
-                 :tag tag})))
+                 :tag tag :s skip :l quant})))
 
 (defn get-bookmarks-for-user
   "Retrieves link, title, note, tags and date added for quant bookmarks
@@ -190,16 +189,16 @@
   ([e-mail skip-quant-vec]
      (get-bookmarks-for-user users-index e-mail skip-quant-vec))
   ([index e-mail [skip quant]]
-     ;; TODO remove concatenation?
      (cy/tquery (str "START user=node:" (:name index) "({key}={value}) "
                      "MATCH (user)-[:has]->(b)-[:bookmarks]->(l), "
-                     "(user)-[t?:tagged]->(b)"
+                     "(user)-[t?:tagged]->(b) "
                      "RETURN b.`date-added`, l.title?, b.note?, l.url, "
                      "COLLECT(DISTINCT t.tag?) "
                      "ORDER BY `b.date-added` DESC"
                      (when (and skip quant)
-                       (str " SKIP " skip " LIMIT " quant)))
-                {:key (or (:key (meta index)) "e-mail") :value e-mail})))
+                       " SKIP {s} LIMIT {l}"))
+                {:key (or (:key (meta index)) "e-mail") :value e-mail
+                 :s skip :l quant})))
 
 (defn recommended-bookmarks-for-user
   "Finds n (or lesser) links that user hasn't yet bookmarked, but might be
@@ -218,8 +217,9 @@
                      "ORDER BY slc DESC "
                      "RETURN url, COUNT(url) as cnt, title "
                      "ORDER BY cnt DESC"
-                     (when n (str " LIMIT " n)))
-                {:key (or (:key (meta index)) "e-mail") :value e-mail})))
+                     (when n " LIMIT {l} "))
+                {:key (or (:key (meta index)) "e-mail") :value e-mail
+                 :l n})))
 
 (defn random-bookmarks-for-user
   "Finds n (or lesser) random links that user hasn't yet bookmarked."
@@ -228,22 +228,24 @@
   ([u-index n e-mail]
      (random-bookmarks-for-user links-index u-index n e-mail))
   ([l-index u-index n e-mail]
-     (cy/tquery
-      (let [lkey (or (:key (meta l-index)) "link") lvalue "*"
-            links-count (number-of-entries-in-index l-index lkey)
-            random-links-limit (* n 2)
-            to-skip (if (> links-count random-links-limit)
-                      (rand-int (- links-count random-links-limit))
-                      0)]
+     (let [lkey (or (:key (meta l-index)) "link") lvalue "*"
+           links-count (number-of-entries-in-index l-index lkey)
+           random-links-limit (* n 2)
+           to-skip (if (> links-count random-links-limit)
+                     (rand-int (- links-count random-links-limit))
+                     0)]
+       (cy/tquery
         (str "START "
-             "link=node:" (:name l-index) "(\"" lkey ":" lvalue "\"), "
+             "link=node:" (:name l-index) "({query}), "
              "user=node:" (:name u-index) "({key}={value}) "
              "WITH link AS l, user AS u "
-             "SKIP " to-skip  " LIMIT " random-links-limit
+             "SKIP {toskip} LIMIT {rndlim} "
              " WHERE NOT((u)-[:has]->()-[:bookmarks]->(l)) "
              "RETURN l.url, l.title? "
-             "LIMIT " n))
-      {:key (or (:key (meta u-index)) "e-mail") :value e-mail})))
+             "LIMIT {l}")
+        {:key (or (:key (meta u-index)) "e-mail") :value e-mail
+         :l n :toskip to-skip :rndlim random-links-limit
+         :query (str lkey ":" lvalue)}))))
 
 (defn get-link-title
   ([link] (get-link-title links-index link))
