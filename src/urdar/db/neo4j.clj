@@ -177,10 +177,10 @@
                      "COLLECT(DISTINCT t.tag?) "
                      "ORDER BY `b.date-added` DESC"
                      (when (and skip quant)
-                       " SKIP {s} LIMIT {l}"))
+                       " SKIP {sk} LIMIT {lm}"))
                 (merge {:key (or (:key (meta index)) "e-mail") :value e-mail
                         :tag tag}
-                       (if (and skip quant) {:s skip :l quant} {})))))
+                       (if (and skip quant) {:sk skip :lm quant} {})))))
 
 (defn get-bookmarks-for-user
   "Retrieves link, title, note, tags and date added for quant bookmarks
@@ -197,9 +197,9 @@
                      "COLLECT(DISTINCT t.tag?) "
                      "ORDER BY `b.date-added` DESC"
                      (when (and skip quant)
-                       " SKIP {s} LIMIT {l}"))
+                       " SKIP {sk} LIMIT {lm}"))
                 (merge {:key (or (:key (meta index)) "e-mail") :value e-mail}
-                       (if (and skip quant) {:s skip :l quant} {})))))
+                       (if (and skip quant) {:sk skip :lm quant} {})))))
 
 (defn recommended-bookmarks-for-user
   "Finds n (or lesser) links that user hasn't yet bookmarked, but might be
@@ -218,9 +218,9 @@
                      "ORDER BY slc DESC "
                      "RETURN url, COUNT(url) as cnt, title "
                      "ORDER BY cnt DESC"
-                     (when n " LIMIT {l} "))
+                     (when n " LIMIT {lm} "))
                 {:key (or (:key (meta index)) "e-mail") :value e-mail
-                 :l n})))
+                 :lm n})))
 
 (defn random-bookmarks-for-user
   "Finds n (or lesser) random links that user hasn't yet bookmarked."
